@@ -659,6 +659,8 @@ class SovereignApp extends HTMLElement {
         if (!view || !title) return;
         const all = this._items;
         const filtered = this._calFilter === 'all' ? all : all.filter(i => i.type === this._calFilter);
+        // today used across all calendar views
+        const today = new Date();
 
         if (this._calView === 'month') {
             // Use UTC to avoid timezone date shifts
@@ -667,7 +669,6 @@ class SovereignApp extends HTMLElement {
             const fd = new Date(Date.UTC(y, m, 1));
             const ld = new Date(Date.UTC(y, m + 1, 0));
             const sd = fd.getUTCDay(); // 0=Sun, 1=Mon, ..., 6=Sat
-            const today = new Date();
             let h = '<div class="cg">';
             ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].forEach(d => h += `<div class="ch">${d}</div>`);
             // Start from the Sunday before or on the 1st

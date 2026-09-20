@@ -1,0 +1,48 @@
+{
+  "name": "sovereign-core",
+  "version": "2.0.0",
+  "description": "Sovereign Core - Local-first peer chat with end-to-end encryption",
+  "type": "module",
+  "scripts": {
+    "test": "node test-suite.js",
+    "test:unit": "node --test core/*.test.js",
+    "lint": "eslint core/ ui/ scripts/ test-suite.js",
+    "lint:fix": "eslint core/ ui/ scripts/ test-suite.js --fix",
+    "typecheck": "tsc --noEmit 2>/dev/null || echo 'tsc not configured, skipping'",
+    "docs:build": "python scripts/build-docs.py",
+    "docs:verify": "python scripts/verify-docs.py",
+    "docs:clean": "rm -rf docs-site",
+    "relay:deploy": "wrangler deploy --config relay/cloudflare/wrangler.jsonc",
+    "relay:dev": "wrangler dev --config relay/cloudflare/wrangler.jsonc",
+    "verify": "npm run lint && npm run test && npm run docs:build && npm run docs:verify"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.9.0",
+    "@cloudflare/workers-types": "^4.20240801.0",
+    "@eslint/js": "^9.9.0",
+    "@playwright/test": "^1.47.0",
+    "@types/node": "^22.5.0",
+    "esbuild": "^0.23.0",
+    "eslint": "^9.9.0",
+    "globals": "^15.9.0",
+    "typescript": "^5.5.4",
+    "wrangler": "^3.78.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "keywords": [
+    "sovereign",
+    "peer-chat",
+    "e2e-encryption",
+    "local-first",
+    "capacitor",
+    "pwa"
+  ],
+  "author": "Sovereign Core Team",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sovereign-core/sovereign-core.git"
+  }
+}

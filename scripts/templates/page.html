@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title }} — Sovereign Core {{ version }}</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-mark">SC</div>
+          <div>
+            <div class="brand-name">Sovereign Core</div>
+            <div class="brand-version">v{{ version }}</div>
+          </div>
+        </div>
+        <button class="sidebar-close" id="sidebar-close" aria-label="Close navigation">×</button>
+      </div>
+      <div class="nav-filter">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="10" cy="10" r="7"/>
+          <path d="M13.5 13.5L17 17"/>
+        </svg>
+        <input type="search" id="nav-filter" placeholder="Filter pages" aria-label="Filter pages">
+      </div>
+      <nav class="nav-group" id="nav-group">
+        {% for group in nav_groups %}
+          <div class="nav-section">
+            <div class="nav-section-title">{{ group.title }}</div>
+            {% for item in group.pages %}
+              {% set page_id = item[0] %}
+              {% if page_id == "../ASFQC/GATES" %}
+                {% set page_id = "gates" %}
+              {% endif %}
+              <a class="nav-link{% if page.slug == page_id %} active{% endif %}" href="{{ page_id }}.html">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
+                  <path d="M10 1.5L17.5 5v10L10 18.5L2.5 15V5L10 1.5Z"/>
+                </svg>
+                <span>{{ item[1] }}</span>
+              </a>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </nav>
+      <div class="sidebar-footer">
+        <div class="status-pill"><span class="status-dot"></span> Enterprise review</div>
+        <div class="status-pill">Buildless · Local-first</div>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="menu-toggle" id="menu-toggle" aria-label="Open navigation">
+          <svg viewBox="0 0 20 20" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 5.5h14M3 10h14M3 14.5h14"/>
+          </svg>
+        </button>
+        <div class="topbar-center">
+          <div class="breadcrumbs" id="breadcrumbs"></div>
+          <div class="version-pill">v{{ version }} · Verified 2026-09-19</div>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+          <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="10" cy="10" r="7"/>
+            <path d="M10 5v10M5 10h10"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="content-layout">
+        <article class="article">
+          <div class="article-inner">
+            <div class="article-header">
+              <div class="eyebrow">Sovereign Core Documentation</div>
+              <h1 class="page-title">{{ page.title }}</h1>
+              <div class="article-rule"></div>
+            </div>
+            <div class="article-body">{{ body }}</div>
+            <div class="article-footer">
+              <div class="article-status">Status: Verified evidence recorded in ASFQC/GATES.md</div>
+              <div class="article-status">Last updated: 2026-09-19</div>
+            </div>
+          </div>
+        </article>
+
+        <aside class="toc">
+          <div class="toc-title">On This Page</div>
+          <nav class="toc-nav" id="toc-nav"></nav>
+          <div class="toc-divider"></div>
+          <div class="toc-title">Page Navigation</div>
+          <div class="toc-links">
+            <a href="quick-start-guide.html">← Quick Start</a>
+            <a href="deployment-guide.html">Deployment →</a>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
