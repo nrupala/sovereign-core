@@ -12,3 +12,4 @@ release/*.apk
 doc-screenshots/
 relay/cloudflare/.wrangler/
 relay.sqlite
+docs-site/
