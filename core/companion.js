@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 export const COMPANION_MIND = { name: "Sovereign Helper", version: "2.0", capabilities: ["Task Routing", "Note Creation", "Ledger Support", "Habit Tracking", "Metadata Audit"] };
 
 export async function parseSovereignIntent(input) {

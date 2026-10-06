@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Isolated Chat Database
  * Contacts, conversations, and message storage, fully separate from the vessel

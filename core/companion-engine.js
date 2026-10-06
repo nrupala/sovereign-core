@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Companion Engine v2.0
  * For the lonely, the quiet, the ones who need someone who remembers.

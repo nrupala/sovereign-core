@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Service Worker
  * Offline-first PWA: pre-caches the complete buildless asset graph, then serves
