@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Internal Test Suite
  * Validates crypto, companion intent parsing, and data flow.

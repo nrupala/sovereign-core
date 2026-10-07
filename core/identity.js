@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Identity Module
  * Manages master key derivation with proper salt handling.

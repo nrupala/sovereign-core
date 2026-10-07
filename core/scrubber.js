@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Metadata Scrubber (Buildless ESM)
  * Zero dependencies. Handles JPEG EXIF and VCard (.vcf) formats.

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Decentralized Sync Bus
  * XMPP-style signaling combined with Double Ratchet E2EE.

@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Intelligence Engine v2.0
  * Local pattern recognition, smart suggestions, anomaly detection.
