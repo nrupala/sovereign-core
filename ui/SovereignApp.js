@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign App v2.0 - Containerized Web Component
  * Shadow DOM, tabbed UI, zero external dependencies.

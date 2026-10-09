@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Double Ratchet E2EE
  * Signal-style Double Ratchet built entirely on WebCrypto primitives.

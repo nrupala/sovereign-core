@@ -1,3 +1,4 @@
+// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Sovereign Signal Broker (XMPP-style)
  * Zero-dependency, buildless signaling layer per COMMUNICATION_v2.md:
