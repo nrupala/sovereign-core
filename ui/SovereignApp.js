@@ -168,8 +168,10 @@ class SovereignApp extends HTMLElement {
                 }
                 
                 const valid = await verifyPassword(pw, salt, vault.verifier);
-                if (!valid) {
-                    // Try legacy vault unlock (old format without verifier)
+                if (!valid && !vault.verifier) {
+                    // Legacy fallback ONLY for old-format vaults that have no
+                    // verifier. A vault WITH a verifier that fails verification
+                    // is a wrong password — never fall through (Phase 0, F-01).
                     this._authErr('Trying legacy vault format...');
                     const legacyValid = await this._tryLegacyUnlock(pw, salt, vault);
                     if (!legacyValid) return this._authErr('Wrong password');
@@ -201,8 +203,10 @@ class SovereignApp extends HTMLElement {
                 else return this._authErr('Vault data corrupted');
                 
                 let valid = await verifyPassword(pw, salt, vault.verifier);
-                // Fallback: legacy unlock
-                if (!valid) valid = await this._tryLegacyUnlock(pw, salt, vault);
+                // Legacy fallback ONLY for old-format vaults without a verifier
+                // (Phase 0, F-02: delete must never be reachable with a wrong
+                // password against a verifier-bearing vault).
+                if (!valid && !vault.verifier) valid = await this._tryLegacyUnlock(pw, salt, vault);
                 if (!valid) return this._authErr('Wrong password');
                 
                 await deleteVault(vid);
