@@ -70,8 +70,17 @@ export async function createVerifier(password, salt) {
 
 /**
  * Verify password by decrypting the stored verifier.
- * Falls back to test encrypt/decrypt if no verifier exists or format is invalid (legacy vaults).
- * Returns true only if decrypted value matches magic string.
+ * Returns true ONLY if the verifier decrypts under the password-derived key
+ * and the plaintext matches the magic string.
+ *
+ * FAIL CLOSED, always: a missing or malformed verifier, a decryption error,
+ * or a plaintext mismatch all return false. There is deliberately NO
+ * self-test fallback — the previous fallback (encrypt/decrypt a test string
+ * with the candidate key) succeeded for every password, including wrong and
+ * empty ones, which left unlock and vault DELETE unauthenticated
+ * (Phase 0 fix, assessment F-01/F-02; regression: core/crypto.test.js).
+ * Legacy vaults without a verifier are authenticated by the caller against
+ * real vessel data (see SovereignApp._tryLegacyUnlock), never here.
  * No key material is ever exposed or returned.
  */
 export async function verifyPassword(password, salt, verifier) {
@@ -88,48 +97,38 @@ export async function verifyPassword(password, salt, verifier) {
             console.warn('[Crypto] Invalid salt format:', typeof salt);
             return false;
         }
-        
-        const key = await deriveKey(password, saltBytes);
-        
-        // If verifier exists and has valid structure, try to use it
-        if (verifier && verifier.ciphertext && verifier.iv) {
-            try {
-                let ct, iv;
-                // Handle various ciphertext formats
-                if (verifier.ciphertext instanceof ArrayBuffer) {
-                    ct = verifier.ciphertext;
-                } else if (verifier.ciphertext instanceof Uint8Array) {
-                    ct = verifier.ciphertext.buffer;
-                } else if (Array.isArray(verifier.ciphertext)) {
-                    ct = new Uint8Array(verifier.ciphertext).buffer;
-                } else {
-                    throw new Error('Invalid ciphertext format');
-                }
-                // Handle various IV formats
-                if (verifier.iv instanceof Uint8Array) {
-                    iv = verifier.iv;
-                } else if (Array.isArray(verifier.iv)) {
-                    iv = new Uint8Array(verifier.iv);
-                } else if (verifier.iv instanceof ArrayBuffer) {
-                    iv = new Uint8Array(verifier.iv);
-                } else {
-                    throw new Error('Invalid IV format');
-                }
-                const result = await decryptData(key, ct, iv);
-                if (result === MAGIC) return true;
-            } catch (err) {
-                // Verifier format invalid or decryption failed - fall back to test
-                console.warn('[Crypto] Verifier decryption failed, using fallback:', err.message);
-            }
+
+        // No verifier, no verification. Fail closed.
+        if (!verifier || !verifier.ciphertext || !verifier.iv) {
+            return false;
         }
-        
-        // Fallback: encrypt then decrypt a test string
-        // This works for ALL vaults regardless of verifier format
-        const testIv = crypto.getRandomValues(new Uint8Array(12));
-        const testCt = await crypto.subtle.encrypt(
-            { name: "AES-GCM", iv: testIv }, key, new TextEncoder().encode(MAGIC)
-        );
-        const result = await decryptData(key, testCt, testIv);
+
+        let ct, iv;
+        // Handle various ciphertext formats
+        if (verifier.ciphertext instanceof ArrayBuffer) {
+            ct = verifier.ciphertext;
+        } else if (verifier.ciphertext instanceof Uint8Array) {
+            ct = verifier.ciphertext.buffer;
+        } else if (Array.isArray(verifier.ciphertext)) {
+            ct = new Uint8Array(verifier.ciphertext).buffer;
+        } else {
+            return false;
+        }
+        // Handle various IV formats
+        if (verifier.iv instanceof Uint8Array) {
+            iv = verifier.iv;
+        } else if (Array.isArray(verifier.iv)) {
+            iv = new Uint8Array(verifier.iv);
+        } else if (verifier.iv instanceof ArrayBuffer) {
+            iv = new Uint8Array(verifier.iv);
+        } else {
+            return false;
+        }
+
+        const key = await deriveKey(password, saltBytes);
+        // AES-GCM authentication makes this throw for any wrong key; a
+        // successful decrypt that does not match the magic is also a failure.
+        const result = await decryptData(key, ct, iv);
         return result === MAGIC;
     } catch (err) {
         console.warn('[Crypto] Password verification failed:', err.message);
