@@ -2,11 +2,11 @@
 
 ## Current status
 
-Sovereign Core is under enterprise-readiness review. This guide describes the implemented user experience. **Peer Chat is implemented and E2E-tested** (identity, invite exchange, relay transport, Double Ratchet, session persistence — desktop↔phone verified 2026-09-10, re-verified 2026-09-17; Cloudflare Worker relay local pentest 24/24 on 2026-09-19). Do not use the current build as evidence of HIPAA, regulatory, or enterprise compliance — release hardening (Android signing, iOS PWA, marketplace distribution) remains open.
+Sovereign Core is under enterprise-readiness review. This guide describes the implemented user experience. Peer-to-peer chat is **not** part of this product (owner decision, 2026-10-12): the Chat tab in the current build stores messages locally on this device only and contacts no peer or relay. Earlier revisions of this guide, and other repository documents, described a verified desktop↔phone messenger; that described a separate September 2026 research build — preserved on branch `laptop/september-build-20261012` under `recovered/september-www/`, with recorded claims that do not reproduce — and it was never the shipped app. The comms code is preserved as labelled R&D. Do not use the current build as evidence of HIPAA, regulatory, or enterprise compliance — release hardening (Android signing, iOS PWA, marketplace distribution) remains open.
 
 ## What the app is
 
-Sovereign Core is intended to be a local-first workspace for tasks, notes, habits, ledger entries, journal entries, calendar views, analytics, a local Companion, and eventually verified peer communication.
+Sovereign Core is a local-first workspace for tasks, notes, habits, ledger entries, journal entries, calendar views, analytics, and a local Companion. It is single-device by design: no account, no cloud, no sync, no telemetry.
 
 Your vault password is the root of access. There is no password recovery service. Exported files may be plaintext and must be protected accordingly.
 
@@ -34,20 +34,13 @@ After unlock, Home is the starting point. It summarizes open tasks, habits, date
 - Analytics: review trends derived from local records.
 - Companion: local assistant behavior; it is not a remote clinical or safety authority.
 - Settings: retention, themes, and data controls.
-- Peer Chat: currently local encrypted chat storage; peer-to-peer transport and identity exchange remain roadmap work.
+- Peer Chat: local encrypted chat storage on this device only. It does not send messages to anyone (see Chat status).
 
-## Chat status and future flow
+## Chat status
 
-The current Chat tab must not be treated as a completed desktop↔mobile messenger. The target flow is:
+Peer-to-peer chat is not part of Sovereign Core (owner decision, 2026-10-12). The Chat tab in this build is a local encrypted notebook: messages are encrypted under your vault key and stored on this device; nothing is sent anywhere, and there is no contact, invite, or relay system in the shipped app. Do not rely on it to communicate with anyone, and do not treat anything in the app as a delivered message.
 
-1. Create a persistent identity.
-2. Add a contact by QR, invite, or verified public key.
-3. Confirm the contact fingerprint.
-4. Connect through an approved relay or later direct transport.
-5. Send and receive messages with visible queued/delivered/failed state.
-6. Remove, block, revoke, or replace a contact deliberately.
-
-The target flow will be documented again after implementation and cross-device testing.
+A peer-communications research build from September 2026 is preserved on branch `laptop/september-build-20261012` under `recovered/september-www/` for reference. If a communications product is ever built, it will be a separate product, documented when it exists and is verified.
 
 ## Backup and sharing
 
@@ -59,6 +52,6 @@ The product is local-first and designed to reduce data exposure. That does not b
 
 ## Help and support content required before release
 
-The final guide must include first-run onboarding, password/backup warnings, every section's primary workflow, chat identity/contact flow, export/import warnings, troubleshooting, accessibility instructions, PWA installation, Android installation, and administrator/deployment guidance.
+The final guide must include first-run onboarding, password/backup warnings, every section's primary workflow, export/import warnings, troubleshooting, accessibility instructions, PWA installation, Android installation, and administrator/deployment guidance.
 
 See `BUILD_PLAN.md` for the approved roadmap proposal.

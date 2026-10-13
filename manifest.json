@@ -1,7 +1,7 @@
 {
   "name": "Sovereign Core v2.0",
   "short_name": "Sovereign",
-  "description": "Zero-trust, zero-knowledge, buildless encrypted workspace. Hollow Vessel architecture with Double Ratchet E2EE sync.",
+  "description": "Buildless, local-first encrypted personal workspace — journal, notes, tasks, habits, ledger and calendar, stored only on your device.",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0a0a0a",

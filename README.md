@@ -2,9 +2,9 @@
 
 **Status: ENTERPRISE-READINESS REVIEW — NOT RELEASE READY**
 
-Sovereign Core is a buildless, local-first encrypted workspace for tasks, notes, habits, ledger, journal, calendar, analytics, Companion, and **verified peer-to-peer encrypted chat** (identity, invite exchange, relay transport, Double Ratchet sessions, session persistence — desktop↔phone E2E verified 2026-09-10, re-verified 2026-09-17; Cloudflare Worker relay pentest 24/24 local 2026-09-19).
+Sovereign Core is a buildless, local-first encrypted workspace for tasks, notes, habits, ledger, journal, calendar, analytics, and a local Companion. It is a journal-first personal workspace: no account, no cloud, no sync, no telemetry — everything is stored on your device, encrypted under your vault password.
 
-The current repository is under a truth-reconciliation and quality refactor. Phase 0 syntax repair and Phase 1 quality foundation are complete (73/73 suite, analytics 9/9, contact-meta 10/10, zeroization 5/5, peer 7/7, peer-reset 2/2). Phase 2+ roadmap items are in progress. Do not treat the current APK, historical claims, or test count as enterprise or production evidence.
+The current repository is under a truth-reconciliation and quality refactor. Test reality (verified 2026-10-12): the test suite passes 69/69 (`node test-suite.js`) and the Node unit tests pass 17/17 (`node --test core/*.test.js`). Earlier documents in this repository cited a "73/73" suite and September 2026 verification events (desktop↔phone E2E, relay pentest 24/24, closed quality gates); those figures do not reproduce from the code in this repository and are superseded — see the 2026-10-12 correction entry in `CHANGELOG.md`. Do not treat the current APK, historical claims, or historical test counts as enterprise or production evidence.
 
 ## Current runtime
 
@@ -12,16 +12,16 @@ The current repository is under a truth-reconciliation and quality refactor. Pha
 - `ui/SovereignApp.js` contains the currently shipped application shell and inline styles.
 - `core/crypto.js` provides PBKDF2-HMAC-SHA-256 key derivation, AES-GCM encryption, and challenge verification.
 - `core/db.js` provides OPFS/IndexedDB storage and vessel persistence.
-- `core/chat-db.js` provides isolated local chat storage.
-- `core/double-ratchet.js`, `core/broker.js`, and `core/sync.js` contain transport/ratchet building blocks. Desktop↔phone E2E chat is verified (2026-09-10, re-verified 2026-09-17) and the Cloudflare Worker relay pentest passes 24/24 (2026-09-19).
+- `core/chat-db.js` provides isolated local chat storage. Chat data never leaves the device; no transport is wired to it in the shipped app.
+- `core/double-ratchet.js`, `core/broker.js`, and `core/sync.js` contain transport/ratchet building blocks. These are research code, not a shipped feature: nothing in the application sends messages anywhere, and no relay client is wired into the shipped app. Peer messaging is not part of the product (owner decision, 2026-10-12); the code is preserved as labelled R&D.
 - `sw.js` provides offline caching; PWA and Android packaging require separate platform verification.
 
 ## Important current limitations
 
-- `ui/SovereignApp.js` passes `node --check` and the full parser/import pipeline. The app boots in Chrome and passes the browser smoke and axe accessibility gates.
-- The current Chat tab provides **verified peer-to-peer E2EE** (persistent identity, signed invites, fingerprint verification, ciphertext-only relay transport, per-contact Double Ratchet sessions, session persistence across restarts). Desktop↔phone E2E was verified on 2026-09-10 and re-verified on 2026-09-17 against the production Cloudflare relay. The Cloudflare Worker local pentest now passes 24/24 (2026-09-19).
-- Contact public keys, relay configuration, incoming messages, identity exchange, ratchet-session persistence, offline delivery, and cross-device transport are verified end to end in the desktop↔phone E2E suite (2026-09-17, production relay).
-- The current test suite contains static checks and behavioral tests (73/73 suite, crypto 6/6, scrubber 2/2, relay-client 4/4, identity 5/5, chat-session 4/4, contact-meta 10/10, analytics 9/9, security 9/9, zeroization 5/5, peer 7/7, peer-reset 2/2) plus browser smoke (19/19) and axe accessibility (0 violations).
+- `ui/SovereignApp.js` passes `node --check` and the test suites below. No browser-smoke or accessibility harness ships in this repository, and no accessibility pass has been verified.
+- The current Chat tab is local-only: messages are encrypted with the vault key and stored on this device. It does not contact any peer or relay — there is no relay client in the shipped app, the attachment button is not wired, and contacts do not exchange keys with anyone. Peer-to-peer messaging is not a product feature (see Product direction).
+- A larger September 2026 peer build (identity, invites, relay client, sessions) exists only as a recovered snapshot on branch `laptop/september-build-20261012` under `recovered/september-www/`, preserved as R&D. Its own recorded gate claims do not reproduce from that snapshot (its unit suite is 54 tests with 7 failures, and its relay end-to-end tests fail as run); see `recovered/september-www/RECOVERY_NOTE.md`.
+- The current test reality (2026-10-12): `node test-suite.js` passes 69/69 and `node --test core/*.test.js` passes 17/17 (analytics 9/9, crypto 6/6 — including the fail-closed password-verifier regression suite added with the 2026-10-12 verifier fix — scrubber 2/2).
 - Several documentation files previously described planned or library-level capabilities as shipped capabilities. Those claims are being reconciled.
 
 ## Product direction
@@ -30,11 +30,11 @@ The target product is a private personal operating space:
 
 - Capture: Tasks, Notes, Journal, Voice
 - Track: Habits, Ledger, Calendar, Analytics
-- Communicate: verified contact-based encrypted chat
+- Communicate: nothing — the product is deliberately single-device. Peer communication is out of scope; the comms code in this repository is preserved as R&D only.
 - Understand: search, summaries, Companion, reminders
 - Control: onboarding, backup, privacy, help, identity, settings
 
-The app must be understandable to ordinary users while exposing precise operational information to security, AI, safety-critical, healthcare, and corporate operators.
+The app must be understandable to ordinary users. It makes no compliance claims (HIPAA or otherwise) and is not positioned for regulated or safety-critical use.
 
 ## Documentation and roadmap
 
@@ -51,22 +51,22 @@ The app must be understandable to ordinary users while exposing precise operatio
 - `docs/PROTOTYPE_UI.md` — onboarding/Home/Peer Chat visual prototype
 - `docs/CHAT_PROTOCOL.md` — peer-chat identity, invite, relay, session, and delivery contract
 - `docs/CHAT_TECHNOLOGY_RESEARCH.md` — SimpleX/XMPP comparison and transport decision input
-- `relay/RELAY_CONTRACT.md` — dual-relay queue contract, TTL, acknowledgement, and redundancy
-- `relay/DEPLOYMENT.md` — Node/Cloudflare deployment and operator setup
-- `relay/node/server.mjs` — Node + SQLite reference relay (not yet production-verified)
-- `relay/cloudflare/` — Cloudflare Worker + Durable Object reference relay (**deployed and production-verified 2026-09-10; local pentest 24/24 2026-09-19**)
+- `relay/RELAY_CONTRACT.md` — dual-relay queue contract, TTL, acknowledgement, and redundancy (research design; not used by the shipped app)
+- `relay/DEPLOYMENT.md` — Node/Cloudflare deployment and operator setup (research design)
+- `relay/cloudflare/` — Cloudflare Worker + Durable Object reference relay (library code with no client in the shipped app; historical deployment and pentest claims are unverified — see the 2026-10-12 correction in `CHANGELOG.md`)
 
 ## Verification policy
 
-Before production or enterprise testing, the project must pass parser/import checks, behavioral tests, browser tests, mobile/PWA tests, chat interoperability tests, accessibility checks, build reproducibility checks, and all applicable ASF gates. See `BUILD_PLAN.md`.
+Before production or enterprise testing, the project must pass parser/import checks, behavioral tests, browser tests, mobile/PWA tests, accessibility checks, build reproducibility checks, and all applicable ASF gates. See `BUILD_PLAN.md`.
 
 ## Local verification
 
 ```
 npm install
-npm run verify
-npm run verify:browser
-npm run verify:a11y
+npm test           # node test-suite.js — 69/69
+npm run test:unit  # node --test core/*.test.js — 17/17
+npm run lint
+npm run verify     # lint + test + docs build/verify
 ```
 
-`npm run verify` runs parser checks, ESLint, 73 test-suite checks, crypto behavior, scrubber tests, and CI consistency checks. `npm run verify:browser` requires Chrome and a static server at `127.0.0.1:8765`; it covers boot, vault create/lock/unlock, wrong-password rejection, navigation, contact create/delete, and page errors. `npm run verify:a11y` runs axe checks against the authentication and Home/Today control trees. Android, iOS PWA, responsive/manual accessibility, clean-checkout CI, and peer Chat interoperability remain separate release gates.
+These are the verification commands that exist in `package.json` today. Older revisions of this document referenced `verify:browser`, `verify:a11y`, and `verify:pentest` scripts and the results they supposedly produced; those scripts are not in this repository and the results are unverified. Android, iOS PWA, responsive/manual accessibility, and clean-checkout CI remain separate release gates.
