@@ -1,5 +1,16 @@
 # Changelog
 
+## Correction — 2026-10-12 (claim reconciliation; documentation only)
+
+A full audit of this repository against its code (2026-10-12), plus a verification pass over the recovered September 2026 laptop build, establish the following corrections to the entries below. The historical entries are left unchanged; this entry supersedes them wherever they conflict.
+
+- **Test counts.** The suite figure for this repository is 69/69 (`node test-suite.js`) with Node unit tests at 17/17 (`node --test core/*.test.js`) — not "73/73". The 73 figure described a larger test set from the September research build and does not reproduce: that build's own unit suite is 54 tests with 7 failures.
+- **Peer chat.** The shipped application in this repository never sent messages anywhere: the Chat tab is local encrypted storage with no relay client wired in. Entries below that describe desktop↔phone E2E verification, production-relay duplex, session-resume passes, and relay contract/integration passes as properties of this product are **unverified and superseded**. A larger September peer build exists (recovered to branch `laptop/september-build-20261012` under `recovered/september-www/`); its end-to-end relay tests fail as run in the verification environment, and its recorded gate claims do not reproduce.
+- **Pentest claims.** The pentest entries below cite harnesses (`scripts/pentest-relay.mjs`, `scripts/pentest-xss.mjs`, `scripts/pentest-storage.mjs`, `scripts/pentest-relay-cf.mjs`) and results (28/28, 9/9, 8/8, 24/24) that are not present in, and cannot be reproduced from, this repository or the recovered build. No pentest scripts or accessibility harness were found in either tree. Treat those entries as unverified.
+- **Gates.** The `ASFQC/GATES.md` statuses (including "Phase 8 gates CLOSED") are superseded by the correction header added to that file on this date.
+- **Product decision.** Peer-to-peer chat is dropped from the sellable product (owner decision, 2026-10-12). The comms code is preserved as labelled R&D. Sovereign Core is a journal-first, local-first encrypted personal workspace: no account, no cloud, no sync, no telemetry.
+- **Verifier fix (already on main).** The same audit proved that `verifyPassword()` accepted every password; that defect was fixed on main before this correction was written (fail-closed verifier; regression suite in `core/crypto.test.js`). Notably, the recovered September build already contained the fail-closed behaviour — the defect was a regression introduced when the GitHub line was later reconciled over that state.
+
 ## Unreleased — 2026-09-19 Cloudflare Worker pentest lane + relay CF-17 fix + analytics fix
 
 - **Cloudflare Worker local pentest lane DONE (G11.3 extension):** `node scripts/pentest-relay-cf.mjs` returns `Pentest(relay-cf): 24/24 defended` (CF-01 health 200, CF-02 queue registration 201, CF-03 no secret echo, CF-04–CF-07 unauthenticated/rejected 403, CF-08 wrong capability 403, CF-09–CF-13 invalid queue id 400, CF-14 malformed JSON 400, CF-15 non-string ciphertext 400, CF-16 expired envelope 400, CF-17 valid send 202, CF-18 oversized body 413, CF-19 SQL injection inert, CF-20 delete with receive capability 200, CF-21 delete path traversal handled, CF-22 no path leak, CF-23 CORS *, CF-24 unknown route 404).

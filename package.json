@@ -1,7 +1,7 @@
 {
   "name": "sovereign-core",
   "version": "2.0.0",
-  "description": "Sovereign Core - Local-first peer chat with end-to-end encryption",
+  "description": "Sovereign Core - buildless, local-first encrypted personal workspace (journal, notes, tasks, habits, ledger, calendar); no account, no cloud, no telemetry",
   "type": "module",
   "scripts": {
     "test": "node test-suite.js",
@@ -33,8 +33,8 @@
   },
   "keywords": [
     "sovereign",
-    "peer-chat",
-    "e2e-encryption",
+    "journal",
+    "encrypted-workspace",
     "local-first",
     "capacitor",
     "pwa"

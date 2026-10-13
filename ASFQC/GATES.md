@@ -1,5 +1,7 @@
 # ASF Quality Gates — Sovereign Core
 
+> **CORRECTION — 2026-10-12.** The gate statuses and evidence claims in this document (including "Phase 8 gates CLOSED", the G9–G11 PASS findings, device E2E passes, pentest results, browser/a11y results, and "73/73" suite counts) come from the September 2026 research-build period and **do not reproduce** from the code in this repository or from the recovered September snapshot (branch `laptop/september-build-20261012`, `recovered/september-www/` — whose own unit suite is 54 tests with 7 failures and whose relay end-to-end tests fail as run). No pentest scripts or accessibility harness exist in either tree, and the browser/a11y/pentest scripts cited below are not in `package.json`. Verified current state of this repository (2026-10-12): `node test-suite.js` 69/69, `node --test core/*.test.js` 17/17, CI green on main. Treat every status below as historical and unverified until re-evidenced against the current code. This file is retained, unedited below this header, as the historical record. See the 2026-10-12 correction entry in `CHANGELOG.md`.
+
 _Status: **Phase 8 gates CLOSED (2026-09-17): G9 PASS, G10 PASS, G11 PASS (G11.1-G11.3 all PASS). Cloudflare Worker local pentest 24/24 defended (2026-09-19). Device-present phone E2E re-run PASS (2026-09-17). Remaining release caveats: Android release signing, iOS PWA standalone verification, marketplace distribution, dependency provenance, and documentation site build integration.**__
 
 | Gate | Status | Evidence required | Current finding |
