@@ -16,6 +16,8 @@ The current repository is under a truth-reconciliation and quality refactor. Tes
 - `core/double-ratchet.js`, `core/broker.js`, and `core/sync.js` contain transport/ratchet building blocks. These are research code, not a shipped feature: nothing in the application sends messages anywhere, and no relay client is wired into the shipped app. Peer messaging is not part of the product (owner decision, 2026-10-12); the code is preserved as labelled R&D.
 - `sw.js` provides offline caching; PWA and Android packaging require separate platform verification.
 
+**Family note (2026-10-18):** The vault family's storage standard is SQLite + SQLCipher. Sovereign Core is parked and currently differs — it stores via OPFS/IndexedDB with WebCrypto AES-GCM. Aligning it with the family standard is a decision for when the product is unparked.
+
 ## Important current limitations
 
 - `ui/SovereignApp.js` passes `node --check` and the test suites below. No browser-smoke or accessibility harness ships in this repository, and no accessibility pass has been verified.
