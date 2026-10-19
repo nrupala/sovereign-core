@@ -1,4 +1,4 @@
-# Sovereign Core v2.0
+# Sovereign Core v2.1.0
 
 **Status: ENTERPRISE-READINESS REVIEW — NOT RELEASE READY**
 
@@ -16,7 +16,7 @@ The current repository is under a truth-reconciliation and quality refactor. Tes
 - `core/double-ratchet.js`, `core/broker.js`, and `core/sync.js` contain transport/ratchet building blocks. These are research code, not a shipped feature: nothing in the application sends messages anywhere, and no relay client is wired into the shipped app. Peer messaging is not part of the product (owner decision, 2026-10-12); the code is preserved as labelled R&D.
 - `sw.js` provides offline caching; PWA and Android packaging require separate platform verification.
 
-**Family note (2026-10-18):** The vault family's storage standard is SQLite + SQLCipher. Sovereign Core is parked and currently differs — it stores via OPFS/IndexedDB with WebCrypto AES-GCM. Aligning it with the family standard is a decision for when the product is unparked.
+**Family note:** The vault family's storage standard is SQLite + SQLCipher. Sovereign Core currently stores via OPFS/IndexedDB with WebCrypto AES-GCM; aligning its storage — SQLite with envelope keys, a recovery key, and encrypted backup — is Phase 1 of its active build, in scope now per the owner's direction.
 
 ## Important current limitations
 
@@ -37,6 +37,12 @@ The target product is a private personal operating space:
 - Control: onboarding, backup, privacy, help, identity, settings
 
 The app must be understandable to ordinary users. It makes no compliance claims (HIPAA or otherwise) and is not positioned for regulated or safety-critical use.
+
+## Licence & billing
+
+Sovereign Core is a commercial product of 2351485 ALBERTA INC., sold as a one-time US$49.99 licence — no subscription. Buy through the official payment link: https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05. After checkout, the claim page shows your licence key; activate it in the app under **Settings → Licence**. Activation is verified offline on your device — the app makes no server call to check a licence. In the shipped configuration (`activation-required`), a licence is needed to create a new vault; it never gates opening or exporting a vault you already have.
+
+The issuer service — Stripe webhook issuance, claim page, refund revocation, and the revocation blocklist — lives in `billing/` and runs at sovereign-billing.aimlds.org. Code licensing is a proprietary core with an Apache 2.0 interface layer: see `LICENSING.md`. The terms that govern the product are in `TERMS.md`.
 
 ## Documentation and roadmap
 

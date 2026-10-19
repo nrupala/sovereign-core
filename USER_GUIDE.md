@@ -19,6 +19,20 @@ Your vault password is the root of access. There is no password recovery service
 - Vault data is stored through OPFS with an IndexedDB fallback where supported.
 - Android cloud backup is disabled in the packaged application.
 
+## Licence
+
+Sovereign Core is sold as a one-time US$49.99 licence. There is no subscription and no account.
+
+**Buying.** Buy through the official payment link: https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05. After payment, the claim page shows your licence key — copy it from there, or from the email copy when email delivery is provided. Keep the key somewhere safe; it is your proof of purchase.
+
+**Activating.** Open the app and go to **Settings → Licence**, paste your key, and tap **Activate**. The key is checked on your device; the app does not contact a server to verify it, and activation works offline.
+
+**Without a licence.** In the shipped configuration, creating a new vault requires an activated licence. Vaults you already have are not affected: they always open with their password and can always be exported. The licence never locks you out of your own data.
+
+**Refunds.** If a purchase is refunded, its licence key is revoked and will no longer activate. Your existing vaults and data are not affected.
+
+**Terms and support.** The terms that govern the product are in `TERMS.md`; the code licensing map is in `LICENSING.md`. For licence help, contact info@aimlds.org.
+
 ## Home / Today
 
 After unlock, Home is the starting point. It summarizes open tasks, habits, dated records, items needing attention, recent records, and Peer Chat status. A new empty vault shows a short Start here card with direct actions for creating a task, writing a note, or opening Help.

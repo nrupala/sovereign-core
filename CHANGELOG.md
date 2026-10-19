@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.0] — 2026-10-19
+
+- **Billing (new).** Sovereign Core is sold as a one-time US$49.99 licence (Stripe). The issuer service (`billing/`, live at sovereign-billing.aimlds.org) issues a signed licence key from the checkout webhook, serves the buyer claim page, and revokes keys on refund; revoked key ids are published on its blocklist endpoint. The in-app licence module (`core/license.js`) verifies keys offline on the device — there is no server check — and gates vault creation only: opening or exporting an existing vault is never gated, in either licence mode. Entitlement was verified end-to-end on 2026-10-19 (grant → claim → activation → refund → revocation). The licence mode is a configuration switch (`UNPAID_MODE` in `core/license.js`); the shipped setting is `activation-required`. (PRs #10, #11, #13.)
+- **Licensing.** The repository carries the split licence decided for the product: proprietary core with an Apache 2.0 interface layer, patent rights expressly reserved on the core. See `LICENSING.md`, `LICENSES/`, and the product terms in `TERMS.md`. (PR #4.)
+- **Fixed — password verification.** `verifyPassword()` accepted every password: any input, including an empty one, unlocked a vault, and vault deletion used the same verifier. It now fails closed — a password is accepted only when the stored verifier decrypts under the key derived from it. Regression suite in `core/crypto.test.js`. (PR #5.)
+- **Fixed — CI install failure.** A dependency bump (PR #6) moved wrangler to a version whose peer range requires `@cloudflare/workers-types` ^5 while the project pinned ^4, so `npm ci` failed and main's CI was red at the install step. Types aligned to ^5; lockfile regenerated. (PR #12.)
+- **Documentation.** The 2026-10-12 correction entry below stands: repository documentation was scrubbed to verified reality — shipped-chat claims, "73/73", device-E2E, and gate-closure claims removed or marked superseded. (PR #7.)
+
 ## Correction — 2026-10-12 (claim reconciliation; documentation only)
 
 A full audit of this repository against its code (2026-10-12), plus a verification pass over the recovered September 2026 laptop build, establish the following corrections to the entries below. The historical entries are left unchanged; this entry supersedes them wherever they conflict.

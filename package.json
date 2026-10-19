@@ -1,6 +1,6 @@
 {
   "name": "sovereign-core",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Sovereign Core - buildless, local-first encrypted personal workspace (journal, notes, tasks, habits, ledger, calendar); no account, no cloud, no telemetry",
   "type": "module",
   "scripts": {
