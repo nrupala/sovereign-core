@@ -29,7 +29,7 @@ Sovereign Core is sold as a one-time US$49.99 licence. There is no subscription 
 
 **Without a licence.** In the shipped configuration, creating a new vault requires an activated licence. Vaults you already have are not affected: they always open with their password and can always be exported. The licence never locks you out of your own data.
 
-**Refunds.** If a purchase is refunded, its licence key is revoked and will no longer activate. Your existing vaults and data are not affected.
+**Refunds.** Direct purchases carry a 30-day money-back guarantee: contact info@aimlds.org within 30 calendar days after purchase to request a full refund. If a purchase is refunded, its licence key is revoked and will no longer activate. Your existing vaults and data are not affected. If you bought through a third-party store, use that store’s refund process.
 
 **Terms and support.** The terms that govern the product are in `TERMS.md`; the code licensing map is in `LICENSING.md`. For licence help, contact info@aimlds.org.
 

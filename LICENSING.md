@@ -48,7 +48,7 @@ If a component’s classification is ambiguous, treat it as proprietary core unt
 
 ## Product terms
 
-The standard product terms in `TERMS.md` apply to official packaged or distributed product supplies. They include the owner-directed liability cap, excluded damages, user-environment responsibility, no absolute security guarantee, consumer-law preservation, severability, and Calgary, Alberta venue provisions.
+The standard product terms in `TERMS.md` apply to official packaged or distributed product supplies. They include the owner-directed liability cap, excluded damages, user-environment responsibility, no absolute security guarantee, consumer-law preservation, severability, Calgary, Alberta venue provisions, and a 30-day money-back guarantee for licences purchased directly from the Company.
 
 ## Third-party material
 

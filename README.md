@@ -42,7 +42,7 @@ The app must be understandable to ordinary users. It makes no compliance claims 
 
 Sovereign Core is a commercial product of 2351485 ALBERTA INC., sold as a one-time US$49.99 licence — no subscription. Buy through the official payment link: https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05. After checkout, the claim page shows your licence key; activate it in the app under **Settings → Licence**. Activation is verified offline on your device — the app makes no server call to check a licence. In the shipped configuration (`activation-required`), a licence is needed to create a new vault; it never gates opening or exporting a vault you already have.
 
-The issuer service — Stripe webhook issuance, claim page, refund revocation, and the revocation blocklist — lives in `billing/` and runs at sovereign-billing.aimlds.org. Code licensing is a proprietary core with an Apache 2.0 interface layer: see `LICENSING.md`. The terms that govern the product are in `TERMS.md`.
+The issuer service — Stripe webhook issuance, claim page, refund revocation, and the revocation blocklist — lives in `billing/` and runs at sovereign-billing.aimlds.org. Code licensing is a proprietary core with an Apache 2.0 interface layer: see `LICENSING.md`. The terms that govern the product are in `TERMS.md`; direct purchases carry the 30-day money-back guarantee stated there.
 
 ## Documentation and roadmap
 

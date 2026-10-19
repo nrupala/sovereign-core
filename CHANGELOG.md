@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Commercial terms.** Sovereign Core licences purchased directly from the Company now carry a 30-day money-back guarantee under `TERMS.md` (owner decision, 2026-10-19). A refund ends the licence and revokes its key; existing vaults and data remain unaffected.
+
 ## [2.1.0] — 2026-10-19
 
 - **Security — billing gate fixes.** The billing issuer no longer trusts the Stripe test-mode webhook secret anywhere in its code (the production deployment verifies against its own live secret only; test-mode proofs run against a separate test deployment), issuance is bound to the Sovereign Core payment link, amount, and currency with live-mode and paid status required (sessions for other products on the shared account, and unpaid sessions, mint nothing), a later async payment failure now claws back any licence already issued for that session, refund revocation applies to full refunds only, and the in-app Buy links point at the live payment link (they previously carried a link that does not exist in the account). (Release-gate findings F-SC-1, F-SC-2, F-SC-3, F-SC-4, F-SC-7.)
