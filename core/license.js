@@ -39,7 +39,7 @@ export const BLOCKLIST = [];
 export const UNPAID_MODE = 'activation-required';
 
 // Stripe Payment Link for the one-time purchase (US$49.99).
-export const BUY_URL = 'https://buy.stripe.com/5kQ3cvc0GbEIbT9bz89Zm05';
+export const BUY_URL = 'https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05';
 
 const PRODUCT = 'sovereign-core';
 const SETTING_KEY = 'license';

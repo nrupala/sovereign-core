@@ -22,16 +22,24 @@ Stripe checkout ──webhook──▶ Worker ──▶ KV (LICENCES)
 1. The buyer pays through the Stripe payment link (below). Stripe fires
    `checkout.session.completed` (and, for delayed payment methods,
    `checkout.session.async_payment_succeeded`) at `POST /billing/webhook`.
-2. The Worker verifies the Stripe signature, then issues a licence:
-   a random licence id (`kid`, 32 hex chars) is embedded in a signed
-   token and the record set is written to KV. Issuance is idempotent
-   per checkout session, so duplicate deliveries return the same token.
+2. The Worker verifies the Stripe signature, then checks the session
+   against the issuance binding (below): only a live-mode, paid session
+   for this product's own payment link, amount, and currency may mint.
+   A matching-but-unpaid session is recorded as pending and mints
+   nothing; any other product's session is ignored. On a qualifying
+   session the Worker issues a licence: a random licence id (`kid`,
+   32 hex chars) is embedded in a signed token and the record set is
+   written to KV. Issuance is idempotent per checkout session, so
+   duplicate deliveries return the same token.
 3. Stripe redirects the buyer to `/claim?session=<checkout session id>`,
    which renders the token for copy-paste into the app
    (**Settings → Licence**). If `RESEND_API_KEY` is configured, the key
    is also emailed.
-4. On `charge.refunded`, the licence tied to that payment intent is
-   revoked and its `kid` is added to the blocklist. The app polls
+4. On `charge.refunded` **for a full refund**, the licence tied to
+   that payment intent is revoked and its `kid` is added to the
+   blocklist; a partial refund does not revoke. On
+   `checkout.session.async_payment_failed`, any licence already issued
+   for that session is clawed back the same way. The app polls
    `/billing/blocklist` and refuses blocklisted keys.
 
 ### The licence token
@@ -47,13 +55,55 @@ The app verifies tokens offline against the public half of the signing
 key embedded in `core/license.js`. The private half exists only as a
 Worker secret.
 
+## One deployment, one webhook secret
+
+Webhook verification trusts exactly one secret: this deployment's own
+`STRIPE_WEBHOOK_SECRET`. There is no fallback. Test-mode proofs run
+against a **separate test deployment** — its own Worker, KV namespace,
+and secrets, configured with the test endpoint's secret — never
+against this deployment. (An earlier version of this issuer accepted
+the test-mode secret as a fallback on the production deployment so a
+proof could run against it; the release gate graded that Critical —
+F-SC-1 — and the fallback is removed from the code, not just the
+config.)
+
+## Issuance binding
+
+Issuance is bound to this product's checkout by plain config vars in
+`worker/wrangler.toml` (`[vars]`):
+
+| Var | Value | Meaning |
+| --- | ----- | ------- |
+| `EXPECTED_PAYMENT_LINK` | `plink_1USH4bEAiA4GKFhAQT5cHucQ` | The only payment link whose sessions may mint |
+| `EXPECTED_AMOUNT_TOTAL` | `4999` | Session `amount_total` must equal this (US$49.99) |
+| `EXPECTED_CURRENCY` | `usd` | Session currency must equal this |
+| `EXPECTED_PRICE_ID` | `price_1USH4VEAiA4GKFhAt8s6JmkC` | Documented identity of the link's line item (the link sells exactly this price) |
+
+A session mints only when **all** of these hold: `livemode` is true,
+`payment_status` is `paid`, `payment_link` matches, `amount_total`
+matches, `currency` matches. If any `EXPECTED_*` var is missing, the
+issuer mints nothing — it fails closed. This matters because the
+Stripe account is shared: the endpoint receives checkout events for
+every product on the account, and none of them may mint a Sovereign
+Core licence.
+
+Two consequences of the binding:
+
+- **Async claw-back.** If a delayed payment later fails
+  (`checkout.session.async_payment_failed`) after a licence was
+  issued, the licence for that session is revoked and blocklisted,
+  and the failure is recorded.
+- **Full-refund-only revocation.** `charge.refunded` revokes only
+  when the charge's `refunded` flag is true (a full refund). A
+  partial refund leaves the licence in force.
+
 ## Live Stripe objects
 
 | Object       | Value |
 | ------------ | ----- |
 | Product      | `prod_VTDV8IepRzX4AY` |
 | Price        | `price_1USH4VEAiA4GKFhAt8s6JmkC` (US$49.99, one-time) |
-| Payment link | https://buy.stripe.com/5kQ3cvc0GbEIbT9bz89Zm05 |
+| Payment link | https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05 |
 
 ## Files
 
@@ -126,9 +176,12 @@ public half replaces the key in `core/license.js` in the deploy commit.
 6. **Point the payment link at the claim page**: set the Stripe payment
    link's post-payment redirect to `https://<domain>/claim?session={CHECKOUT_SESSION_ID}`
    so buyers land on their key.
-7. **Smoke-test**: `GET /health` returns `ok`; run a test-mode purchase
-   end to end and confirm the claim page shows a token the app accepts,
-   then refund it and confirm the kid appears at `/billing/blocklist`.
+7. **Smoke-test**: `GET /health` returns `ok`. Run test-mode proofs
+   against a separate test deployment of this Worker (its own KV and
+   secrets, including the test endpoint's webhook secret) — never
+   against production: confirm the claim page shows a token the app
+   accepts, then refund it and confirm the kid appears at
+   `/billing/blocklist` on that deployment.
 
 ## Tests
 

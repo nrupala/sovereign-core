@@ -1996,7 +1996,7 @@ class SovereignApp extends HTMLElement {
                     <input type="text" id="lic-key-auth" class="ainp" placeholder="Paste your licence key" autocomplete="off" spellcheck="false">
                     <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem">
                         <button class="abtn" style="flex:1" onclick="this.getRootNode().host._activateLicense('lic-key-auth','lic-msg-auth')">Activate</button>
-                        <a href="https://buy.stripe.com/5kQ3cvc0GbEIbT9bz89Zm05" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--primary);white-space:nowrap">Buy Sovereign Core — US$49.99</a>
+                        <a href="https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--primary);white-space:nowrap">Buy Sovereign Core — US$49.99</a>
                     </div>
                     <div id="lic-msg-auth" class="aerr"></div>
                 </div>
@@ -2178,7 +2178,7 @@ class SovereignApp extends HTMLElement {
                         </div>
                         <div class="card"><div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem">Licence</div>
                             <div class="sr"><div><div class="srl">Status</div><div class="srd">Creating a vault requires activation. Opening and exporting your vaults is always free — your data is never gated.</div></div><span id="lic-status" style="color:var(--primary);font-size:0.7rem">…</span></div>
-                            <div style="display:flex;gap:0.375rem;flex-wrap:wrap;align-items:center;margin-top:0.5rem"><input type="text" id="lic-key-set" class="fi" style="flex:1;min-width:200px" placeholder="Paste your licence key" autocomplete="off" spellcheck="false"><button class="btn bs" onclick="this.getRootNode().host._activateLicense('lic-key-set','lic-msg-set')">Activate</button><a class="btn bs" href="https://buy.stripe.com/5kQ3cvc0GbEIbT9bz89Zm05" target="_blank" rel="noopener" style="text-decoration:none">Buy Sovereign Core — US$49.99</a></div>
+                            <div style="display:flex;gap:0.375rem;flex-wrap:wrap;align-items:center;margin-top:0.5rem"><input type="text" id="lic-key-set" class="fi" style="flex:1;min-width:200px" placeholder="Paste your licence key" autocomplete="off" spellcheck="false"><button class="btn bs" onclick="this.getRootNode().host._activateLicense('lic-key-set','lic-msg-set')">Activate</button><a class="btn bs" href="https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05" target="_blank" rel="noopener" style="text-decoration:none">Buy Sovereign Core — US$49.99</a></div>
                             <div id="lic-msg-set" style="font-size:0.7rem;color:var(--t2);margin-top:0.375rem"></div>
                         </div>
                         <div class="card"><div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem">Security</div>

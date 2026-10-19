@@ -13,21 +13,38 @@
  *   GET  /health              "ok"
  *
  * Secrets (set at deploy via `wrangler secret put`, never committed):
- *   STRIPE_WEBHOOK_SECRET      live Stripe webhook endpoint signing secret
- *   STRIPE_WEBHOOK_SECRET_TEST test-mode endpoint signing secret — webhook
- *                              verification tries the live secret first, then
- *                              this one, so the test-mode entitlement proof can
- *                              run against the same deployment
+ *   STRIPE_WEBHOOK_SECRET      this deployment's Stripe webhook endpoint
+ *                              signing secret — the ONLY secret webhook
+ *                              verification ever trusts here
  *   LICENSE_SIGNING_KEY_JWK    licence signing private key (JWK JSON)
  *   RESEND_API_KEY             optional; enables the licence email leg
  *   MAIL_FROM                  optional; defaults to the AIMLDS address
+ *
+ * INVARIANT — one deployment, one webhook secret: a deployment trusts
+ * exactly one webhook secret, its own. Test-mode proofs run against a
+ * separate test deployment with its own Worker, KV, and secrets; a
+ * test-mode secret is never trusted here, and no fallback exists.
+ * (The previous fallback to a test secret on the production deployment
+ * was release-gate finding F-SC-1, Critical; it is removed, not
+ * configured off.)
+ *
+ * Issuance binding (wrangler.toml [vars], not secrets):
+ *   EXPECTED_PAYMENT_LINK / EXPECTED_AMOUNT_TOTAL / EXPECTED_CURRENCY
+ *   identify the one checkout this issuer may mint for. A checkout
+ *   session mints only when it fully qualifies against that binding
+ *   (see sessionQualifiesForIssuance in lib.js); if any EXPECTED_* var
+ *   is missing, nothing mints — the issuer fails closed.
  */
 
 import {
   verifyStripeSignature,
   issueLicence,
   revokeByPaymentIntent,
+  revokeBySession,
   markSessionFailed,
+  markSessionPending,
+  sessionMatchesBinding,
+  sessionQualifiesForIssuance,
   getBlocklist,
 } from "./lib.js";
 
@@ -140,12 +157,14 @@ async function handleWebhook(request, env, ctx) {
   const rawBody = await request.text();
   const sigHeader = request.headers.get("stripe-signature");
   const now = Math.floor(Date.now() / 1000);
-  // Live secret first, then the test-mode secret (proof lane). No configured
-  // secret verifying the signature means the delivery is not from Stripe.
-  let ok = false;
-  for (const secret of [env.STRIPE_WEBHOOK_SECRET, env.STRIPE_WEBHOOK_SECRET_TEST]) {
-    if (secret && await verifyStripeSignature(rawBody, sigHeader, secret, now)) { ok = true; break; }
+  // One deployment, one webhook secret (see header): verification uses
+  // env.STRIPE_WEBHOOK_SECRET only. If it is unset, fail closed —
+  // nothing is processed.
+  if (!env.STRIPE_WEBHOOK_SECRET) {
+    console.error("billing webhook: STRIPE_WEBHOOK_SECRET is not configured");
+    return new Response("webhook secret not configured", { status: 500 });
   }
+  const ok = await verifyStripeSignature(rawBody, sigHeader, env.STRIPE_WEBHOOK_SECRET, now);
   if (!ok) return new Response("invalid signature", { status: 400 });
 
   let event;
@@ -161,30 +180,67 @@ async function handleWebhook(request, env, ctx) {
   switch (event.type) {
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
-      const signingKey = JSON.parse(env.LICENSE_SIGNING_KEY_JWK);
-      const { licence, created } = await issueLicence(store, {
-        sessionId: obj.id,
-        email: obj.customer_details?.email ?? obj.customer_email ?? null,
-        paymentIntent: obj.payment_intent ?? null,
-      }, signingKey);
-      if (created) {
-        const mail = sendLicenceEmail(env, licence, obj.id, new URL(request.url).origin);
-        if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(mail);
-        else await mail;
+      // Issuance binding (F-SC-2): mint only for a session that fully
+      // qualifies against this deployment's EXPECTED_* binding. If the
+      // binding is not configured, mint nothing (fail closed).
+      const expected = expectedBinding(env);
+      if (expected && sessionQualifiesForIssuance(obj, expected)) {
+        const signingKey = JSON.parse(env.LICENSE_SIGNING_KEY_JWK);
+        const { licence, created } = await issueLicence(store, {
+          sessionId: obj.id,
+          email: obj.customer_details?.email ?? obj.customer_email ?? null,
+          paymentIntent: obj.payment_intent ?? null,
+        }, signingKey);
+        if (created) {
+          const mail = sendLicenceEmail(env, licence, obj.id, new URL(request.url).origin);
+          if (ctx && typeof ctx.waitUntil === "function") ctx.waitUntil(mail);
+          else await mail;
+        }
+      } else if (expected && sessionMatchesBinding(obj, expected)) {
+        // Our checkout, but the payment has not cleared (e.g. a delayed
+        // payment method): record it as pending and DO NOT mint. The
+        // async_payment_succeeded delivery mints once it qualifies.
+        await markSessionPending(store, obj.id);
       }
+      // Anything else is another product's session on the shared Stripe
+      // account (or an unconfigured binding): ignore it entirely.
       break;
     }
     case "checkout.session.async_payment_failed":
+      // Claw-back (F-SC-3): if a licence was already issued for this
+      // session, revoke it; the failure is recorded either way.
+      await revokeBySession(store, obj.id);
       await markSessionFailed(store, obj.id);
       break;
     case "charge.refunded":
-      await revokeByPaymentIntent(store, obj.payment_intent);
+      // F-SC-7 decision: revocation is full-refund-only. A partial
+      // refund (refunded === false, amount_refunded > 0) does NOT
+      // revoke the licence.
+      if (obj.refunded === true) {
+        await revokeByPaymentIntent(store, obj.payment_intent);
+      }
       break;
     default:
       // Unknown event types are acknowledged and ignored.
       break;
   }
   return Response.json({ received: true });
+}
+
+/**
+ * The issuance binding from deployment config. Returns null when any
+ * part is missing or malformed — callers must mint nothing then.
+ */
+function expectedBinding(env) {
+  const paymentLink = env.EXPECTED_PAYMENT_LINK;
+  const currency = env.EXPECTED_CURRENCY;
+  const amountRaw = env.EXPECTED_AMOUNT_TOTAL;
+  if (!paymentLink || !currency || amountRaw === undefined || amountRaw === null || amountRaw === "") {
+    return null;
+  }
+  const amountTotal = Number(amountRaw);
+  if (!Number.isFinite(amountTotal)) return null;
+  return { paymentLink, amountTotal, currency };
 }
 
 async function handleClaim(url, env) {
