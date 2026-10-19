@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "test": "node test-suite.js",
-    "test:unit": "node --test core/*.test.js",
+    "test:unit": "node --test core/*.test.js billing/worker/*.test.js",
     "lint": "eslint core/ ui/ scripts/ test-suite.js",
     "lint:fix": "eslint core/ ui/ scripts/ test-suite.js --fix",
     "typecheck": "tsc --noEmit 2>/dev/null || echo 'tsc not configured, skipping'",

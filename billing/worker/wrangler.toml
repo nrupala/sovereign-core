@@ -1,0 +1,21 @@
+# Sovereign Core billing issuer.
+# Wrangler resolves the ES-module import of ./lib.js from worker.js at
+# deploy time; there is no separate build step.
+name = "sovereign-billing"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Licence store. The ids below are PLACEHOLDERS: create the real
+# namespace at deploy (`wrangler kv namespace create LICENCES`, plus
+# `--preview` for local dev) and replace them before deploying.
+[[kv_namespaces]]
+binding = "LICENCES"
+id = "00000000000000000000000000000000" # PLACEHOLDER — real namespace id goes here at deploy
+preview_id = "00000000000000000000000000000000" # PLACEHOLDER — real preview namespace id goes here at deploy
+
+# No secrets live in [vars]. STRIPE_WEBHOOK_SECRET,
+# LICENSE_SIGNING_KEY_JWK and (optionally) RESEND_API_KEY / MAIL_FROM
+# are set with `wrangler secret put` at deploy — see billing/README.md.
+
+# Custom domain is attached at deploy, e.g.:
+# routes = [{ pattern = "billing.aimlds.org", custom_domain = true }]
