@@ -110,6 +110,14 @@ function claimRevokedPage() {
     <p class="muted">If you believe this is a mistake, contact support at info@aimlds.org.</p>`);
 }
 
+function claimFailedPage() {
+  return page("Payment did not complete", `
+    <h1>Sovereign Core</h1>
+    <p>The payment for this purchase did not complete, so no licence is active for it.</p>
+    <p>If money left your account for this purchase, it will be returned by your payment provider.</p>
+    <p class="muted">If you believe this is a mistake, contact support at info@aimlds.org.</p>`);
+}
+
 function claimProcessingPage() {
   return page("Payment processing", `
     <h1>Sovereign Core</h1>
@@ -209,7 +217,13 @@ async function handleWebhook(request, env, ctx) {
     case "checkout.session.async_payment_failed":
       // Claw-back (F-SC-3): if a licence was already issued for this
       // session, revoke it; the failure is recorded either way.
+      // Revocation runs through both indexes (session and payment
+      // intent): each is idempotent, and under KV eventual consistency
+      // either record may be the one that has propagated.
       await revokeBySession(store, obj.id);
+      if (obj.payment_intent) {
+        await revokeByPaymentIntent(store, obj.payment_intent);
+      }
       await markSessionFailed(store, obj.id);
       break;
     case "charge.refunded":
@@ -254,7 +268,18 @@ async function handleClaim(url, env) {
       { headers: HTML_HEADERS }
     );
   }
-  const raw = await kvStore(env).get(`session:${sessionId}`);
+  const store = kvStore(env);
+  const raw = await store.get(`session:${sessionId}`);
+  // Claim-layer payment-failure guard: a recorded payment failure for
+  // this session means no licence is active for it, so the token is
+  // never shown — even if the licence record still says "active"
+  // because the claw-back's revocation write has not propagated yet
+  // (KV is eventually consistent), and even when there is no licence
+  // record at all (the failure page, not the processing page).
+  const failedRaw = await store.get(`failed:${sessionId}`);
+  if (failedRaw) {
+    return new Response(claimFailedPage(), { headers: HTML_HEADERS });
+  }
   if (!raw) return new Response(claimProcessingPage(), { headers: HTML_HEADERS });
   const licence = JSON.parse(raw);
   if (licence.status === "revoked") {

@@ -97,6 +97,16 @@ Two consequences of the binding:
   when the charge's `refunded` flag is true (a full refund). A
   partial refund leaves the licence in force.
 
+The claim layer carries its own guard on top of the claw-back: KV is
+eventually consistent, so the claw-back's revocation write may not
+have propagated by the time a buyer opens the claim page. Because the
+failure itself is recorded unconditionally (`failed:<session id>`),
+`/claim` checks for that record before showing anything — a session
+with a recorded payment failure never displays a licence key, even
+if its licence record still reads "active", and shows the
+payment-failed page instead of the processing page when there is no
+licence record at all.
+
 ## Live Stripe objects
 
 | Object       | Value |
