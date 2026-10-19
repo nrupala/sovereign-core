@@ -138,6 +138,13 @@ class SovereignApp extends HTMLElement {
             await initSovereignDB();
 
             if (mode === 'create') {
+                // Licence gate (core/license.js): creating a vault may
+                // require activation; opening and exporting never do.
+                const { requiresLicense, hasValidLicense } = await import('../core/license.js');
+                if (requiresLicense('create-vault') && !(await hasValidLicense())) {
+                    this._showActivation();
+                    return this._authErr('Activation required — paste your licence key below, or buy Sovereign Core to create a vault. Existing vaults always open without a licence.');
+                }
                 const name = this._shadow.getElementById('vault-name-input')?.value.trim();
                 if (!name) return this._authErr('Vault name required');
                 const vaults = await getAllVaults();
@@ -334,6 +341,41 @@ class SovereignApp extends HTMLElement {
 
 
     _authErr(msg) { const el = this._shadow.getElementById('auth-err'); if (el) el.textContent = msg; }
+
+    /* ── Licence / Activation ── */
+    _showActivation() {
+        const box = this._shadow.getElementById('license-box');
+        if (box) box.style.display = 'block';
+        const inp = this._shadow.getElementById('lic-key-auth');
+        if (inp) inp.focus();
+    }
+
+    async _activateLicense(inputId, msgId) {
+        const setMsg = (t) => { const m = this._shadow.getElementById(msgId); if (m) m.textContent = t; };
+        try {
+            const token = this._shadow.getElementById(inputId)?.value.trim();
+            if (!token) return setMsg('Paste your licence key first.');
+            setMsg('Checking licence key…');
+            const { storeLicense } = await import('../core/license.js');
+            if (await storeLicense(token)) {
+                setMsg('Licensed ✓ Thank you.');
+                const box = this._shadow.getElementById('license-box');
+                if (box) box.style.display = 'none';
+                this._authErr('Licensed ✓ Now press Create Vault with your vault name and password.');
+                await this._refreshLicenseUI();
+            } else {
+                setMsg('That licence key is not valid — check the key and try again.');
+            }
+        } catch (e) { this._log('error', 'Activation failed:', e); setMsg('Activation error: ' + e.message); }
+    }
+
+    async _refreshLicenseUI() {
+        try {
+            const { hasValidLicense } = await import('../core/license.js');
+            const el = this._shadow.getElementById('lic-status');
+            if (el) el.textContent = (await hasValidLicense()) ? 'Licensed ✓' : 'Not licensed';
+        } catch (e) { this._log('warn', 'Licence status load failed:', e); }
+    }
 
     async _loadSettings() {
         try {
@@ -857,6 +899,7 @@ class SovereignApp extends HTMLElement {
         if (h) h.value = this._settings.historyLimit;
         if (r) r.value = this._settings.retentionDays;
         if (a) a.classList.toggle('on', this._settings.autoArchive);
+        this._refreshLicenseUI();
     }
 
     /* ── Chat ── */
@@ -1947,6 +1990,16 @@ class SovereignApp extends HTMLElement {
                 </div>
                 <div id="vault-dna" style="margin-top:0.75rem"></div>
                 <div id="auth-err" class="aerr"></div>
+                <!-- Activation (shown only when vault creation is licence-gated) -->
+                <div id="license-box" style="display:none;margin-top:0.75rem;text-align:left">
+                    <label class="fl" for="lic-key-auth">Licence Key</label>
+                    <input type="text" id="lic-key-auth" class="ainp" placeholder="Paste your licence key" autocomplete="off" spellcheck="false">
+                    <div style="display:flex;gap:0.5rem;align-items:center;margin-top:0.5rem">
+                        <button class="abtn" style="flex:1" onclick="this.getRootNode().host._activateLicense('lic-key-auth','lic-msg-auth')">Activate</button>
+                        <a href="https://buy.stripe.com/5kQ3cvc0GbEIbT9bz89Zm05" target="_blank" rel="noopener" style="font-size:0.75rem;color:var(--primary);white-space:nowrap">Buy Sovereign Core — US$49.99</a>
+                    </div>
+                    <div id="lic-msg-auth" class="aerr"></div>
+                </div>
                 <div class="ahint">Encryption happens locally. No data leaves your device.<br>No password recovery possible.</div>
             </div>
         </div>
@@ -2122,6 +2175,11 @@ class SovereignApp extends HTMLElement {
                         </div>
                         <div class="card"><div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem">Export / Import</div>
                             <div style="display:flex;gap:0.375rem;flex-wrap:wrap"><button class="btn bs" id="exp-json2" title="Export all vault data as JSON">📤 JSON</button><button class="btn bs" id="exp-csv2" title="Export all vault data as CSV">📤 CSV</button><button class="btn bs" id="exp-txt2" title="Export all vault data as plain text">📤 TXT</button><button class="btn bs" id="imp-json2" title="Import vault data from JSON">📥 JSON</button><button class="btn bs" id="imp-csv2" title="Import vault data from CSV">📥 CSV</button><button class="btn bs" id="imp-ics2" title="Import calendar events from ICS">📥 ICS</button></div>
+                        </div>
+                        <div class="card"><div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem">Licence</div>
+                            <div class="sr"><div><div class="srl">Status</div><div class="srd">Creating a vault requires activation. Opening and exporting your vaults is always free — your data is never gated.</div></div><span id="lic-status" style="color:var(--primary);font-size:0.7rem">…</span></div>
+                            <div style="display:flex;gap:0.375rem;flex-wrap:wrap;align-items:center;margin-top:0.5rem"><input type="text" id="lic-key-set" class="fi" style="flex:1;min-width:200px" placeholder="Paste your licence key" autocomplete="off" spellcheck="false"><button class="btn bs" onclick="this.getRootNode().host._activateLicense('lic-key-set','lic-msg-set')">Activate</button><a class="btn bs" href="https://buy.stripe.com/5kQ3cvc0GbEIbT9bz89Zm05" target="_blank" rel="noopener" style="text-decoration:none">Buy Sovereign Core — US$49.99</a></div>
+                            <div id="lic-msg-set" style="font-size:0.7rem;color:var(--t2);margin-top:0.375rem"></div>
                         </div>
                         <div class="card"><div style="font-size:0.8rem;font-weight:600;margin-bottom:0.75rem">Security</div>
                             <div class="sr"><div><div class="srl">Vault Items</div><div class="srd" id="item-count">0 vessels</div></div></div>

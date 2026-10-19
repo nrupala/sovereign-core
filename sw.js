@@ -21,6 +21,7 @@ const PRECACHE_URLS = [
     './ui/theme.css',
     './core/crypto.js',
     './core/db.js',
+    './core/license.js',
     './core/identity.js',
     './core/sync.js',
     './core/double-ratchet.js',
