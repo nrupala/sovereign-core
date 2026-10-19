@@ -89,6 +89,39 @@ export async function signToken(payloadObj, privateJwk) {
   return `${payloadSeg}.${base64urlEncode(new Uint8Array(sig))}`;
 }
 
+/**
+ * Issuance binding (F-SC-2): the identity half of the binding — the
+ * session belongs to THIS product's checkout when livemode, the payment
+ * link, the amount, and the currency all match the expected values
+ * configured for this deployment (EXPECTED_* in wrangler.toml). Pure;
+ * any missing or mismatched field fails closed.
+ */
+export function sessionMatchesBinding(session, expected) {
+  if (!session || !expected) return false;
+  if (!expected.paymentLink || !expected.currency) return false;
+  const expectedAmount = Number(expected.amountTotal);
+  if (!Number.isFinite(expectedAmount)) return false;
+  const sessionAmount = Number(session.amount_total);
+  if (!Number.isFinite(sessionAmount)) return false;
+  return (
+    session.livemode === true &&
+    session.payment_link === expected.paymentLink &&
+    sessionAmount === expectedAmount &&
+    session.currency === expected.currency
+  );
+}
+
+/**
+ * Full issuance qualification: the session matches the binding identity
+ * AND the payment has actually cleared (payment_status 'paid'). True
+ * only when every condition holds — no partial credit, no defaults
+ * that pass.
+ */
+export function sessionQualifiesForIssuance(session, expected) {
+  if (!session) return false;
+  return sessionMatchesBinding(session, expected) && session.payment_status === "paid";
+}
+
 /** Random licence id: 16 random bytes as 32 lowercase hex chars. */
 export function generateKid() {
   const bytes = new Uint8Array(16);
@@ -141,26 +174,34 @@ export async function markSessionFailed(store, sessionId) {
 }
 
 /**
- * Revoke the licence tied to a payment intent (refund path). Flips the
- * session and kid records to status 'revoked' and adds the kid to the
- * `blocklist` array record the app polls.
- *
- * @returns {Promise<{revoked: boolean, kid?: string, sessionId?: string, reason?: string}>}
+ * Record a session that matches the binding identity but has not been
+ * paid yet (e.g. a delayed payment method still clearing). No licence
+ * is created; issuance waits for checkout.session.async_payment_succeeded
+ * to arrive with the session fully qualified.
  */
-export async function revokeByPaymentIntent(store, paymentIntent) {
-  if (!paymentIntent) return { revoked: false, reason: "no payment intent" };
-  const kid = await store.get(`pi:${paymentIntent}`);
-  if (!kid) return { revoked: false, reason: "no licence for payment intent" };
+export async function markSessionPending(store, sessionId) {
+  await store.put(
+    `pending:${sessionId}`,
+    JSON.stringify({ sessionId, status: "pending", at: new Date().toISOString() })
+  );
+}
+
+/**
+ * Shared revocation mechanics: flip the kid and session records to
+ * status 'revoked' and add the kid to the `blocklist` array record the
+ * app polls. Idempotent — re-revoking changes nothing further.
+ */
+async function revokeKid(store, kid, sessionId) {
   const kidRaw = await store.get(`kid:${kid}`);
   const kidRec = kidRaw ? JSON.parse(kidRaw) : {};
-  const sessionId = kidRec.sessionId ?? null;
-  await store.put(`kid:${kid}`, JSON.stringify({ ...kidRec, sessionId, status: "revoked" }));
-  if (sessionId) {
-    const sRaw = await store.get(`session:${sessionId}`);
+  const sid = sessionId ?? kidRec.sessionId ?? null;
+  await store.put(`kid:${kid}`, JSON.stringify({ ...kidRec, sessionId: sid, status: "revoked" }));
+  if (sid) {
+    const sRaw = await store.get(`session:${sid}`);
     if (sRaw) {
       const licence = JSON.parse(sRaw);
       licence.status = "revoked";
-      await store.put(`session:${sessionId}`, JSON.stringify(licence));
+      await store.put(`session:${sid}`, JSON.stringify(licence));
     }
   }
   const blocklist = await getBlocklist(store);
@@ -168,7 +209,43 @@ export async function revokeByPaymentIntent(store, paymentIntent) {
     blocklist.push(kid);
     await store.put("blocklist", JSON.stringify(blocklist));
   }
+  return sid;
+}
+
+/**
+ * Revoke the licence tied to a payment intent (refund path).
+ *
+ * @returns {Promise<{revoked: boolean, kid?: string, sessionId?: string, reason?: string}>}
+ */
+export async function revokeByPaymentIntent(store, paymentIntent) {
+  if (!paymentIntent) return { revoked: false, reason: "no payment intent" };
+  const kid = await store.get(`pi:${paymentIntent}`);
+  if (!kid) return { revoked: false, reason: "no licence for payment intent" };
+  const sessionId = await revokeKid(store, kid, null);
   return { revoked: true, kid, sessionId };
+}
+
+/**
+ * Revoke the licence issued for a checkout session (async-payment
+ * claw-back path, F-SC-3). Looks the licence up through the
+ * session:<id> record issueLicence wrote. Idempotent.
+ *
+ * @returns {Promise<string|null>} the revoked kid, or null when the
+ * session has no licence.
+ */
+export async function revokeBySession(store, sessionId) {
+  if (!sessionId) return null;
+  const raw = await store.get(`session:${sessionId}`);
+  if (!raw) return null;
+  let licence;
+  try {
+    licence = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!licence.kid) return null;
+  await revokeKid(store, licence.kid, sessionId);
+  return licence.kid;
 }
 
 /** Read the blocklist array record (empty array when unset/corrupt). */

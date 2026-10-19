@@ -13,9 +13,24 @@ binding = "LICENCES"
 id = "00000000000000000000000000000000" # PLACEHOLDER — real namespace id goes here at deploy
 preview_id = "00000000000000000000000000000000" # PLACEHOLDER — real preview namespace id goes here at deploy
 
-# No secrets live in [vars]. STRIPE_WEBHOOK_SECRET,
-# LICENSE_SIGNING_KEY_JWK and (optionally) RESEND_API_KEY / MAIL_FROM
-# are set with `wrangler secret put` at deploy — see billing/README.md.
+# Issuance binding: this issuer mints licences ONLY for checkout
+# sessions that match this payment link, amount, and currency (and are
+# live-mode and paid). The payment link sells exactly the configured
+# price (EXPECTED_PRICE_ID is carried as the documented identity of
+# the link's line item). If any of these vars is missing at runtime,
+# the issuer mints nothing — it fails closed.
+[vars]
+EXPECTED_PAYMENT_LINK = "plink_1USH4bEAiA4GKFhAQT5cHucQ"
+EXPECTED_AMOUNT_TOTAL = "4999"
+EXPECTED_CURRENCY = "usd"
+EXPECTED_PRICE_ID = "price_1USH4VEAiA4GKFhAt8s6JmkC"
+
+# Secrets do not live in [vars]. STRIPE_WEBHOOK_SECRET is THE webhook
+# secret for this deployment — the only one its verification trusts.
+# Test mode is a separate Worker deployment with its own config; no
+# test secret exists in this deployment's world. LICENSE_SIGNING_KEY_JWK
+# and (optionally) RESEND_API_KEY / MAIL_FROM are set with
+# `wrangler secret put` at deploy — see billing/README.md.
 
 # Custom domain is attached at deploy, e.g.:
 # routes = [{ pattern = "billing.aimlds.org", custom_domain = true }]

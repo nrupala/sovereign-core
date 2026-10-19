@@ -23,7 +23,7 @@ Your vault password is the root of access. There is no password recovery service
 
 Sovereign Core is sold as a one-time US$49.99 licence. There is no subscription and no account.
 
-**Buying.** Buy through the official payment link: https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05. After payment, the claim page shows your licence key — copy it from there, or from the email copy when email delivery is provided. Keep the key somewhere safe; it is your proof of purchase.
+**Buying.** Buy through the official payment link: https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05. After payment, the claim page shows your licence key — copy it from there. Keep the key somewhere safe; it is your proof of purchase.
 
 **Activating.** Open the app and go to **Settings → Licence**, paste your key, and tap **Activate**. The key is checked on your device; the app does not contact a server to verify it, and activation works offline.
 

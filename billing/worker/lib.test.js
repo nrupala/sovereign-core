@@ -22,6 +22,9 @@ import {
   issueLicence,
   markSessionFailed,
   revokeByPaymentIntent,
+  revokeBySession,
+  sessionMatchesBinding,
+  sessionQualifiesForIssuance,
   getBlocklist,
 } from "./lib.js";
 import worker from "./worker.js";
@@ -61,6 +64,9 @@ function fakeEnv() {
       LICENCES: { get: store.get, put: store.put },
       STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
       LICENSE_SIGNING_KEY_JWK: JSON.stringify(TEST_PRIVATE_JWK), // TEST ONLY key
+      EXPECTED_PAYMENT_LINK: EXPECTED.paymentLink,
+      EXPECTED_AMOUNT_TOTAL: String(EXPECTED.amountTotal),
+      EXPECTED_CURRENCY: EXPECTED.currency,
     },
   };
 }
@@ -82,11 +88,24 @@ function eventBody(type, object) {
   return JSON.stringify({ id: "evt_test", type, data: { object } });
 }
 
-const COMPLETED = eventBody("checkout.session.completed", {
-  id: "cs_test_123",
-  customer_details: { email: "buyer@example.com" },
-  payment_intent: "pi_123",
-});
+const EXPECTED = { paymentLink: "plink_test_sovereign", amountTotal: 4999, currency: "usd" };
+
+/** A checkout session that fully qualifies for issuance, overridable per test. */
+function qualifyingSession(overrides = {}) {
+  return {
+    id: "cs_test_123",
+    livemode: true,
+    payment_status: "paid",
+    payment_link: EXPECTED.paymentLink,
+    amount_total: EXPECTED.amountTotal,
+    currency: EXPECTED.currency,
+    customer_details: { email: "buyer@example.com" },
+    payment_intent: "pi_123",
+    ...overrides,
+  };
+}
+
+const COMPLETED = eventBody("checkout.session.completed", qualifyingSession());
 
 /* ---------------- Stripe signature verification ---------------- */
 
@@ -227,14 +246,20 @@ test("worker: webhook with a bad signature gets 400 and issues nothing", async (
   assert.equal(store.map.size, 0);
 });
 
-test("worker: test-mode secret is accepted as fallback when the live secret does not match", async () => {
+test("worker: a test-mode secret is never trusted, even when present in env", async () => {
   const { env, store } = fakeEnv();
-  env.STRIPE_WEBHOOK_SECRET = "whsec_live_placeholder_not_matching";
   env.STRIPE_WEBHOOK_SECRET_TEST = "whsec_test_mode_secret";
   const res = await worker.fetch(webhookRequest(COMPLETED, "whsec_test_mode_secret"), env, {});
-  assert.equal(res.status, 200);
-  const licence = JSON.parse(await store.get("session:cs_test_123"));
-  assert.equal(licence.status, "active");
+  assert.equal(res.status, 400);
+  assert.equal(store.map.size, 0);
+});
+
+test("worker: with no webhook secret configured the handler fails closed", async () => {
+  const { env, store } = fakeEnv();
+  delete env.STRIPE_WEBHOOK_SECRET;
+  const res = await worker.fetch(webhookRequest(COMPLETED), env, {});
+  assert.equal(res.status, 500);
+  assert.equal(store.map.size, 0);
 });
 
 test("worker: checkout.session.completed issues a licence; claim page shows the token", async () => {
@@ -261,11 +286,7 @@ test("worker: checkout.session.completed issues a licence; claim page shows the 
 test("worker: completing the same session twice issues exactly one licence", async () => {
   const { env, store } = fakeEnv();
   await worker.fetch(webhookRequest(COMPLETED), env, {});
-  const again = eventBody("checkout.session.async_payment_succeeded", {
-    id: "cs_test_123",
-    customer_details: { email: "buyer@example.com" },
-    payment_intent: "pi_123",
-  });
+  const again = eventBody("checkout.session.async_payment_succeeded", qualifyingSession());
   const res = await worker.fetch(webhookRequest(again), env, {});
   assert.equal(res.status, 200);
   const sessions = [...store.map.keys()].filter((k) => k.startsWith("session:"));
@@ -286,7 +307,7 @@ test("worker: charge.refunded revokes; claim shows revoked; blocklist lists the 
   await worker.fetch(webhookRequest(COMPLETED), env, {});
   const licence = JSON.parse(await store.get("session:cs_test_123"));
 
-  const refund = eventBody("charge.refunded", { id: "ch_123", payment_intent: "pi_123" });
+  const refund = eventBody("charge.refunded", { id: "ch_123", payment_intent: "pi_123", refunded: true, amount_refunded: 4999 });
   const res = await worker.fetch(webhookRequest(refund), env, {});
   assert.equal(res.status, 200);
   assert.equal(JSON.parse(await store.get("session:cs_test_123")).status, "revoked");
@@ -320,4 +341,115 @@ test("worker: unknown event types are acknowledged with 200 and ignored", async 
   assert.equal(res.status, 200);
   assert.deepEqual(await res.json(), { received: true });
   assert.equal(store.map.size, 0);
+});
+
+/* ---------------- Issuance binding (F-SC-2) ---------------- */
+
+test("sessionQualifiesForIssuance: all conditions correct -> true", () => {
+  assert.equal(sessionQualifiesForIssuance(qualifyingSession(), EXPECTED), true);
+  assert.equal(sessionMatchesBinding(qualifyingSession(), EXPECTED), true);
+});
+
+test("sessionQualifiesForIssuance: each single failing condition -> false", () => {
+  const cases = {
+    "not live mode": { livemode: false },
+    "not paid": { payment_status: "unpaid" },
+    "no payment status": { payment_status: undefined },
+    "wrong payment link": { payment_link: "plink_some_other_product" },
+    "no payment link": { payment_link: undefined },
+    "wrong amount": { amount_total: 300 },
+    "wrong currency": { currency: "cad" },
+  };
+  for (const [name, over] of Object.entries(cases)) {
+    assert.equal(sessionQualifiesForIssuance(qualifyingSession(over), EXPECTED), false, name);
+  }
+});
+
+test("sessionQualifiesForIssuance: a missing expected binding never passes", () => {
+  assert.equal(sessionQualifiesForIssuance(qualifyingSession(), null), false);
+  assert.equal(sessionQualifiesForIssuance(qualifyingSession(), {}), false);
+  assert.equal(sessionQualifiesForIssuance(qualifyingSession(), { paymentLink: EXPECTED.paymentLink }), false);
+  assert.equal(sessionQualifiesForIssuance(null, EXPECTED), false);
+});
+
+test("sessionMatchesBinding ignores payment_status (identity only)", () => {
+  assert.equal(sessionMatchesBinding(qualifyingSession({ payment_status: "unpaid" }), EXPECTED), true);
+});
+
+test("worker: a wrong-product session mints nothing and writes nothing", async () => {
+  const { env, store } = fakeEnv();
+  const body = eventBody("checkout.session.completed", qualifyingSession({
+    id: "cs_other_product", payment_link: "plink_some_other_product", amount_total: 300,
+  }));
+  const res = await worker.fetch(webhookRequest(body), env, {});
+  assert.equal(res.status, 200);
+  assert.equal(store.map.size, 0);
+});
+
+test("worker: an unpaid session for our link is recorded pending and mints nothing", async () => {
+  const { env, store } = fakeEnv();
+  const body = eventBody("checkout.session.completed", qualifyingSession({
+    id: "cs_unpaid", payment_status: "unpaid",
+  }));
+  const res = await worker.fetch(webhookRequest(body), env, {});
+  assert.equal(res.status, 200);
+  assert.equal(await store.get("session:cs_unpaid"), null);
+  assert.equal(JSON.parse(await store.get("pending:cs_unpaid")).status, "pending");
+});
+
+test("worker: without the EXPECTED_* binding configured, nothing mints", async () => {
+  const { env, store } = fakeEnv();
+  delete env.EXPECTED_PAYMENT_LINK;
+  const res = await worker.fetch(webhookRequest(COMPLETED), env, {});
+  assert.equal(res.status, 200);
+  assert.equal(store.map.size, 0);
+});
+
+/* ---------------- Revocation by session (F-SC-3) ---------------- */
+
+test("revokeBySession revokes, blocklists, is idempotent; unknown session -> null", async () => {
+  const store = memStore();
+  const { licence } = await issueLicence(store, {
+    sessionId: "cs_claw", email: "buyer@example.com", paymentIntent: "pi_claw",
+  }, TEST_PRIVATE_JWK);
+
+  assert.equal(await revokeBySession(store, "cs_claw"), licence.kid);
+  assert.equal(JSON.parse(await store.get("session:cs_claw")).status, "revoked");
+  assert.equal(JSON.parse(await store.get(`kid:${licence.kid}`)).status, "revoked");
+  assert.deepEqual(await getBlocklist(store), [licence.kid]);
+
+  // Idempotent: same kid returned, blocklist not duplicated.
+  assert.equal(await revokeBySession(store, "cs_claw"), licence.kid);
+  assert.deepEqual(await getBlocklist(store), [licence.kid]);
+
+  assert.equal(await revokeBySession(store, "cs_never_issued"), null);
+  assert.equal(await revokeBySession(store, null), null);
+});
+
+test("worker: async_payment_failed after issuance claws the licence back", async () => {
+  const { env, store } = fakeEnv();
+  await worker.fetch(webhookRequest(COMPLETED), env, {});
+  const licence = JSON.parse(await store.get("session:cs_test_123"));
+  assert.equal(licence.status, "active");
+
+  const failed = eventBody("checkout.session.async_payment_failed", { id: "cs_test_123" });
+  const res = await worker.fetch(webhookRequest(failed), env, {});
+  assert.equal(res.status, 200);
+  assert.equal(JSON.parse(await store.get("session:cs_test_123")).status, "revoked");
+  assert.equal(JSON.parse(await store.get("failed:cs_test_123")).status, "failed");
+  assert.deepEqual(await getBlocklist(store), [licence.kid]);
+});
+
+/* ---------------- Refund scope (F-SC-7: full-refund-only) ---------------- */
+
+test("worker: a partial refund does NOT revoke the licence", async () => {
+  const { env, store } = fakeEnv();
+  await worker.fetch(webhookRequest(COMPLETED), env, {});
+  const partial = eventBody("charge.refunded", {
+    id: "ch_123", payment_intent: "pi_123", refunded: false, amount_refunded: 1000,
+  });
+  const res = await worker.fetch(webhookRequest(partial), env, {});
+  assert.equal(res.status, 200);
+  assert.equal(JSON.parse(await store.get("session:cs_test_123")).status, "active");
+  assert.deepEqual(await getBlocklist(store), []);
 });
