@@ -1,5 +1,5 @@
 {
-  "name": "Sovereign Core v2.0",
+  "name": "Sovereign Core v2.1.0",
   "short_name": "Sovereign",
   "description": "Buildless, local-first encrypted personal workspace — journal, notes, tasks, habits, ledger and calendar, stored only on your device.",
   "start_url": "./index.html",

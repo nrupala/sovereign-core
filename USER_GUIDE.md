@@ -2,7 +2,7 @@
 
 ## Current status
 
-Sovereign Core is under enterprise-readiness review. This guide describes the implemented user experience. Peer-to-peer chat is **not** part of this product (owner decision, 2026-10-12): the Chat tab in the current build stores messages locally on this device only and contacts no peer or relay. Earlier revisions of this guide, and other repository documents, described a verified desktop↔phone messenger; that described a separate September 2026 research build — preserved on branch `laptop/september-build-20261012` under `recovered/september-www/`, with recorded claims that do not reproduce — and it was never the shipped app. The comms code is preserved as labelled R&D. Do not use the current build as evidence of HIPAA, regulatory, or enterprise compliance — release hardening (Android signing, iOS PWA, marketplace distribution) remains open.
+This guide describes Sovereign Core v2.1.0, the current release — sold as a one-time licence (see Licence), with the storage rework (SQLite, recovery key, encrypted backup) in progress and Google Play packaging still to come. It describes the implemented user experience. Peer-to-peer chat is **not** part of this product (owner decision, 2026-10-12): the Chat tab in the current build stores messages locally on this device only and contacts no peer or relay. Earlier revisions of this guide, and other repository documents, described a verified desktop↔phone messenger; that described a separate September 2026 research build — preserved on branch `laptop/september-build-20261012` under `recovered/september-www/`, with recorded claims that do not reproduce — and it was never the shipped app. The comms code is preserved as labelled R&D. Do not use the current build as evidence of HIPAA, regulatory, or enterprise compliance — release hardening (Android signing, iOS PWA, marketplace distribution) remains open.
 
 ## What the app is
 
@@ -18,6 +18,20 @@ Your vault password is the root of access. There is no password recovery service
 - Locking should clear the in-memory key and return to the authentication screen.
 - Vault data is stored through OPFS with an IndexedDB fallback where supported.
 - Android cloud backup is disabled in the packaged application.
+
+## Licence
+
+Sovereign Core is sold as a one-time US$49.99 licence. There is no subscription and no account.
+
+**Buying.** Buy through the official payment link: https://buy.stripe.com/5kQ3cvc0GbEI4qH32C9Zm05. After payment, the claim page shows your licence key — copy it from there, or from the email copy when email delivery is provided. Keep the key somewhere safe; it is your proof of purchase.
+
+**Activating.** Open the app and go to **Settings → Licence**, paste your key, and tap **Activate**. The key is checked on your device; the app does not contact a server to verify it, and activation works offline.
+
+**Without a licence.** In the shipped configuration, creating a new vault requires an activated licence. Vaults you already have are not affected: they always open with their password and can always be exported. The licence never locks you out of your own data.
+
+**Refunds.** If a purchase is refunded, its licence key is revoked and will no longer activate. Your existing vaults and data are not affected.
+
+**Terms and support.** The terms that govern the product are in `TERMS.md`; the code licensing map is in `LICENSING.md`. For licence help, contact info@aimlds.org.
 
 ## Home / Today
 
