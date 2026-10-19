@@ -13,10 +13,14 @@
  *   GET  /health              "ok"
  *
  * Secrets (set at deploy via `wrangler secret put`, never committed):
- *   STRIPE_WEBHOOK_SECRET    Stripe webhook endpoint signing secret
- *   LICENSE_SIGNING_KEY_JWK  licence signing private key (JWK JSON)
- *   RESEND_API_KEY           optional; enables the licence email leg
- *   MAIL_FROM                optional; defaults to the AIMLDS address
+ *   STRIPE_WEBHOOK_SECRET      live Stripe webhook endpoint signing secret
+ *   STRIPE_WEBHOOK_SECRET_TEST test-mode endpoint signing secret — webhook
+ *                              verification tries the live secret first, then
+ *                              this one, so the test-mode entitlement proof can
+ *                              run against the same deployment
+ *   LICENSE_SIGNING_KEY_JWK    licence signing private key (JWK JSON)
+ *   RESEND_API_KEY             optional; enables the licence email leg
+ *   MAIL_FROM                  optional; defaults to the AIMLDS address
  */
 
 import {
@@ -134,12 +138,14 @@ async function sendLicenceEmail(env, licence, sessionId, origin) {
 
 async function handleWebhook(request, env, ctx) {
   const rawBody = await request.text();
-  const ok = await verifyStripeSignature(
-    rawBody,
-    request.headers.get("stripe-signature"),
-    env.STRIPE_WEBHOOK_SECRET,
-    Math.floor(Date.now() / 1000)
-  );
+  const sigHeader = request.headers.get("stripe-signature");
+  const now = Math.floor(Date.now() / 1000);
+  // Live secret first, then the test-mode secret (proof lane). No configured
+  // secret verifying the signature means the delivery is not from Stripe.
+  let ok = false;
+  for (const secret of [env.STRIPE_WEBHOOK_SECRET, env.STRIPE_WEBHOOK_SECRET_TEST]) {
+    if (secret && await verifyStripeSignature(rawBody, sigHeader, secret, now)) { ok = true; break; }
+  }
   if (!ok) return new Response("invalid signature", { status: 400 });
 
   let event;

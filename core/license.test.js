@@ -11,15 +11,22 @@ import {
 } from './license.js';
 
 // Behaviour tests for the licence module. Tokens are signed in-test with a
-// TEST-ONLY private key whose public half is the TEST key embedded in
-// core/license.js. This key pair is for tests only — never used in
-// production issuance and never shipped anywhere else.
+// TEST-ONLY private key, and verification is pointed at the matching TEST
+// public key explicitly (verifyLicenseToken's second argument) because the
+// module ships the PRODUCTION public key. This key pair is for tests only —
+// never used in production issuance.
 
 const TEST_PRIVATE_JWK = {
     kty: 'EC', crv: 'P-256',
     x: 'ty_kP2zAS2fxy3AKhAgdi7_MMsy4rUxWPbqNiuR3c08',
     y: 'AgeAnftHm4ZVDtJYDutzDMBckUG_tQK_v1cKZ4xUnt4',
     d: '4YVHZjMGAkfHHYG7JTXGI23zPvr-9-N7B2HIz5fGjXU'
+};
+
+const TEST_PUBLIC_JWK = {
+    kty: 'EC', crv: 'P-256',
+    x: 'ty_kP2zAS2fxy3AKhAgdi7_MMsy4rUxWPbqNiuR3c08',
+    y: 'AgeAnftHm4ZVDtJYDutzDMBckUG_tQK_v1cKZ4xUnt4'
 };
 
 const KID = '0123456789abcdef0123456789abcdef';
@@ -40,7 +47,7 @@ async function signToken(payloadObj) {
 
 test('a valid token verifies and returns its payload', async () => {
     const token = await signToken(GOOD_PAYLOAD);
-    const payload = await verifyLicenseToken(token);
+    const payload = await verifyLicenseToken(token, TEST_PUBLIC_JWK);
     assert.deepEqual(payload, GOOD_PAYLOAD);
 });
 
@@ -49,7 +56,7 @@ test('a tampered payload is rejected', async () => {
     const sigSegment = token.split('.')[1];
     const forgedSegment = b64url(new TextEncoder().encode(
         JSON.stringify({ ...GOOD_PAYLOAD, iat: GOOD_PAYLOAD.iat + 1000 })));
-    assert.equal(await verifyLicenseToken(forgedSegment + '.' + sigSegment), null);
+    assert.equal(await verifyLicenseToken(forgedSegment + '.' + sigSegment, TEST_PUBLIC_JWK), null);
 });
 
 test('a tampered signature is rejected', async () => {
@@ -57,35 +64,35 @@ test('a tampered signature is rejected', async () => {
     const [seg, sig] = token.split('.');
     const sigBytes = Buffer.from(sig, 'base64url');
     sigBytes[0] ^= 0xff;
-    assert.equal(await verifyLicenseToken(seg + '.' + sigBytes.toString('base64url')), null);
+    assert.equal(await verifyLicenseToken(seg + '.' + sigBytes.toString('base64url'), TEST_PUBLIC_JWK), null);
 });
 
 test('garbage tokens are rejected with null and never throw', async () => {
     for (const junk of ['', 'abc', 'a.b.c', '!!!.???', '.', 'x.', null, undefined, 42, {}]) {
-        assert.equal(await verifyLicenseToken(junk), null, `expected null for ${String(junk)}`);
+        assert.equal(await verifyLicenseToken(junk, TEST_PUBLIC_JWK), null, `expected null for ${String(junk)}`);
     }
     // well-formed base64url but not JSON
     const notJson = b64url(new TextEncoder().encode('hello')) + '.' + b64url(new Uint8Array(64));
-    assert.equal(await verifyLicenseToken(notJson), null);
+    assert.equal(await verifyLicenseToken(notJson, TEST_PUBLIC_JWK), null);
 });
 
 test('a token for the wrong product is rejected even when validly signed', async () => {
     const token = await signToken({ ...GOOD_PAYLOAD, product: 'vault-tracker' });
-    assert.equal(await verifyLicenseToken(token), null);
+    assert.equal(await verifyLicenseToken(token, TEST_PUBLIC_JWK), null);
 });
 
 test('malformed payload fields are rejected', async () => {
-    assert.equal(await verifyLicenseToken(await signToken({ ...GOOD_PAYLOAD, v: 2 })), null);
-    assert.equal(await verifyLicenseToken(await signToken({ ...GOOD_PAYLOAD, kid: 'xyz' })), null);
-    assert.equal(await verifyLicenseToken(await signToken({ ...GOOD_PAYLOAD, iat: 'now' })), null);
+    assert.equal(await verifyLicenseToken(await signToken({ ...GOOD_PAYLOAD, v: 2 }), TEST_PUBLIC_JWK), null);
+    assert.equal(await verifyLicenseToken(await signToken({ ...GOOD_PAYLOAD, kid: 'xyz' }), TEST_PUBLIC_JWK), null);
+    assert.equal(await verifyLicenseToken(await signToken({ ...GOOD_PAYLOAD, iat: 'now' }), TEST_PUBLIC_JWK), null);
 });
 
 test('a blocklisted kid is rejected', async () => {
     const token = await signToken(GOOD_PAYLOAD);
-    assert.notEqual(await verifyLicenseToken(token), null); // valid before listing
+    assert.notEqual(await verifyLicenseToken(token, TEST_PUBLIC_JWK), null); // valid before listing
     BLOCKLIST.push(KID);
     try {
-        assert.equal(await verifyLicenseToken(token), null);
+        assert.equal(await verifyLicenseToken(token, TEST_PUBLIC_JWK), null);
     } finally {
         BLOCKLIST.splice(BLOCKLIST.indexOf(KID), 1);
     }
