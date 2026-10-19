@@ -36,6 +36,12 @@ Nothing in these Product Terms excludes or limits a right or liability that cann
 
 These Product Terms are governed by the laws of Alberta and the federal laws of Canada applicable in Alberta. Any litigation concerning the product or these terms must be brought exclusively in the courts located in Calgary, Alberta. Any mediation or arbitration concerning the product or these terms, if used, must be seated and conducted solely in Calgary, Alberta, unless the Company agrees otherwise in writing or applicable law requires otherwise.
 
-## 9. Contact
+## 9. 30-day money-back guarantee
+
+If you purchase a sovereign-core licence directly from the Company, you may request a full refund within 30 calendar days after the date of purchase. To request a refund, contact info@aimlds.org from the email address used for the purchase, or provide enough checkout information for the Company to identify the purchase. The refund will be issued to the original payment method, subject to the payment processor’s processing times.
+
+When a refund is issued, the licence for that purchase ends and its licence key will be revoked. A refund does not delete or lock your existing vaults or data. If you purchased through a third-party store or reseller, that seller’s refund process applies. This guarantee is in addition to any rights that cannot be excluded under applicable law.
+
+## 10. Contact
 
 Questions about these Product Terms may be sent to info@aimlds.org.
