@@ -1,10 +1,10 @@
 # Sovereign Core v2.1.0
 
-**Status: ENTERPRISE-READINESS REVIEW — NOT RELEASE READY**
+**Status: v2.1.0 — billing live (one-time licence, issuer + in-app activation). Storage rework (Phase 1) in progress; not yet published on Google Play.**
 
 Sovereign Core is a buildless, local-first encrypted workspace for tasks, notes, habits, ledger, journal, calendar, analytics, and a local Companion. It is a journal-first personal workspace: no account, no cloud, no sync, no telemetry — everything is stored on your device, encrypted under your vault password.
 
-The current repository is under a truth-reconciliation and quality refactor. Test reality (verified 2026-10-12): the test suite passes 69/69 (`node test-suite.js`) and the Node unit tests pass 17/17 (`node --test core/*.test.js`). Earlier documents in this repository cited a "73/73" suite and September 2026 verification events (desktop↔phone E2E, relay pentest 24/24, closed quality gates); those figures do not reproduce from the code in this repository and are superseded — see the 2026-10-12 correction entry in `CHANGELOG.md`. Do not treat the current APK, historical claims, or historical test counts as enterprise or production evidence.
+Test reality (verified 2026-10-19): the test suite passes 69/69 (`node test-suite.js`) and the Node unit tests pass 46/46 (`npm run test:unit`, covering the core and billing suites). Earlier documents in this repository cited a "73/73" suite and September 2026 verification events (desktop↔phone E2E, relay pentest 24/24, closed quality gates); those figures do not reproduce from the code in this repository and are superseded — see the 2026-10-12 correction entry in `CHANGELOG.md`. Do not treat historical claims or historical test counts as production evidence. The APK wrapper in this repository predates this release and is not the distribution artifact; Google Play packaging is a later phase.
 
 ## Current runtime
 
