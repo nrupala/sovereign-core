@@ -17,13 +17,15 @@
 
 import { getSetting, setSetting } from './db.js';
 
-// TEST KEY — production public key is swapped in at billing deploy.
-// The matching private key lives only on the issuer side, never in this repo.
+// PRODUCTION KEY — set at billing deploy (2026-10-19). The matching
+// private key lives only as the issuer Worker's LICENSE_SIGNING_KEY_JWK
+// secret; it is never in this repo. (Tests pass their own TEST public key
+// to verifyLicenseToken explicitly — see core/license.test.js.)
 export const LICENSE_PUBLIC_JWK = {
     kty: 'EC',
     crv: 'P-256',
-    x: 'ty_kP2zAS2fxy3AKhAgdi7_MMsy4rUxWPbqNiuR3c08',
-    y: 'AgeAnftHm4ZVDtJYDutzDMBckUG_tQK_v1cKZ4xUnt4'
+    x: '_tFlpZH-_YJDaMDQ5CwhGv416c6-cAur33pzbnV41r0',
+    y: 'fnMiOP1rSUiPGUWOjEhXgFA4AVpePVtizMp9jVJHSg4'
 };
 
 // Revoked licence ids (payload.kid). Updated per release from the issuer's
@@ -43,16 +45,17 @@ const PRODUCT = 'sovereign-core';
 const SETTING_KEY = 'license';
 const KID_RE = /^[0-9a-f]{32}$/i;
 
-let _publicKeyPromise = null;
-function _publicKey() {
-    if (!_publicKeyPromise) {
-        _publicKeyPromise = globalThis.crypto.subtle.importKey(
-            'jwk', LICENSE_PUBLIC_JWK,
+const _publicKeyCache = new Map();
+function _publicKey(jwk) {
+    const cacheKey = jwk && jwk.x;
+    if (!_publicKeyCache.has(cacheKey)) {
+        _publicKeyCache.set(cacheKey, globalThis.crypto.subtle.importKey(
+            'jwk', jwk,
             { name: 'ECDSA', namedCurve: 'P-256' },
             false, ['verify']
-        );
+        ));
     }
-    return _publicKeyPromise;
+    return _publicKeyCache.get(cacheKey);
 }
 
 function _b64urlToBytes(segment) {
@@ -69,7 +72,7 @@ function _b64urlToBytes(segment) {
  * ANY failure (malformed, wrong product/version, bad kid/iat shape,
  * blocklisted kid, bad signature). Fails closed; never throws.
  */
-export async function verifyLicenseToken(token) {
+export async function verifyLicenseToken(token, publicJwk = LICENSE_PUBLIC_JWK) {
     try {
         if (typeof token !== 'string') return null;
         const parts = token.trim().split('.');
@@ -83,7 +86,7 @@ export async function verifyLicenseToken(token) {
         if (typeof payload.iat !== 'number' || !Number.isFinite(payload.iat)) return null;
         if (BLOCKLIST.some(k => String(k).toLowerCase() === payload.kid.toLowerCase())) return null;
 
-        const key = await _publicKey();
+        const key = await _publicKey(publicJwk);
         const ok = await globalThis.crypto.subtle.verify(
             { name: 'ECDSA', hash: 'SHA-256' },
             key,

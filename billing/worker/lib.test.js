@@ -227,6 +227,16 @@ test("worker: webhook with a bad signature gets 400 and issues nothing", async (
   assert.equal(store.map.size, 0);
 });
 
+test("worker: test-mode secret is accepted as fallback when the live secret does not match", async () => {
+  const { env, store } = fakeEnv();
+  env.STRIPE_WEBHOOK_SECRET = "whsec_live_placeholder_not_matching";
+  env.STRIPE_WEBHOOK_SECRET_TEST = "whsec_test_mode_secret";
+  const res = await worker.fetch(webhookRequest(COMPLETED, "whsec_test_mode_secret"), env, {});
+  assert.equal(res.status, 200);
+  const licence = JSON.parse(await store.get("session:cs_test_123"));
+  assert.equal(licence.status, "active");
+});
+
 test("worker: checkout.session.completed issues a licence; claim page shows the token", async () => {
   const { env, store } = fakeEnv();
   const res = await worker.fetch(webhookRequest(COMPLETED), env, {});
