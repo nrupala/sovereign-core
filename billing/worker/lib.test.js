@@ -440,6 +440,37 @@ test("worker: async_payment_failed after issuance claws the licence back", async
   assert.deepEqual(await getBlocklist(store), [licence.kid]);
 });
 
+/* ---------------- Claim-layer payment-failure guard ---------------- */
+
+test("worker: claim refuses the token when a failed record exists beside an active licence", async () => {
+  const { env, store } = fakeEnv();
+  await worker.fetch(webhookRequest(COMPLETED), env, {});
+  const licence = JSON.parse(await store.get("session:cs_test_123"));
+  assert.equal(licence.status, "active");
+  // Simulate the KV eventual-consistency race: the failure was recorded
+  // (markSessionFailed writes unconditionally) but the claw-back's
+  // revocation write has not propagated — the licence still reads active.
+  await store.put("failed:cs_test_123", JSON.stringify({ sessionId: "cs_test_123", status: "failed", at: new Date().toISOString() }));
+
+  const claim = await worker.fetch(new Request("https://billing.example/claim?session=cs_test_123"), env, {});
+  assert.equal(claim.status, 200);
+  const html = await claim.text();
+  assert.ok(/did not complete/i.test(html), "claim page shows the payment-failed notice");
+  assert.ok(!html.includes(licence.token), "claim page must not contain the token when a failure is recorded");
+});
+
+test("worker: claim shows the payment-failed page for a failed record with no licence record", async () => {
+  const { env, store } = fakeEnv();
+  await store.put("failed:cs_failed_only", JSON.stringify({ sessionId: "cs_failed_only", status: "failed", at: new Date().toISOString() }));
+  assert.equal(await store.get("session:cs_failed_only"), null);
+
+  const claim = await worker.fetch(new Request("https://billing.example/claim?session=cs_failed_only"), env, {});
+  assert.equal(claim.status, 200);
+  const html = await claim.text();
+  assert.ok(/did not complete/i.test(html), "claim page shows the payment-failed notice");
+  assert.ok(!/still processing/i.test(html), "failed session must not show the processing page");
+});
+
 /* ---------------- Refund scope (F-SC-7: full-refund-only) ---------------- */
 
 test("worker: a partial refund does NOT revoke the licence", async () => {
