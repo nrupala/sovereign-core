@@ -1,0 +1,48 @@
+<!-- Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy — Sovereign Core</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        background: #0a0a0a;
+        color: #e5e5e5;
+        line-height: 1.6;
+        padding: 2rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #10b981; }
+    h2 { font-size: 1.4rem; margin-top: 2rem; margin-bottom: 1rem; color: #10b981; }
+    p { margin-bottom: 1rem; color: #a3a3a3; }
+    strong { color: #e5e5e5; }
+    a { color: #10b981; }
+    footer { margin-top: 3rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 1rem; font-size: 0.85rem; color: #a3a3a3; }
+</style>
+</head>
+<body>
+<main>
+    <h1>Privacy — Sovereign Core</h1>
+    <p>Sovereign Core is local-first by design. This page states, in plain terms, what data exists where when you use the app and when you buy a licence.</p>
+
+    <h2>The app collects nothing</h2>
+    <p>There is no account, no sign-up, no telemetry, no analytics, and no cloud sync. Your vault data is stored on your own device and encrypted with a key derived from your vault password. The app makes no server call of its own, and licence activation is verified offline on your device. <strong>2351485 ALBERTA INC.</strong> (AIMLDS) cannot see, access, or recover your vault data or your password — there is no password recovery service.</p>
+
+    <h2>Buying a licence</h2>
+    <p>Checkout is hosted by Stripe, which processes your payment — your card details go to Stripe and are never seen or stored by the seller. When a payment completes, Stripe tells the licence issuer the checkout details it needs (such as your email address and the checkout session) so it can issue your licence key, show it on your claim page, and revoke the key if the purchase is refunded. The issuer keeps the licence record tied to that purchase; it holds no vault data.</p>
+
+    <h2>Exports are yours</h2>
+    <p>Anything you export from the app is a file under your control. Exported files may be plaintext, so protect them the way you would protect the data itself.</p>
+
+    <h2>Contact</h2>
+    <p>Questions about privacy: <a href="mailto:info@aimlds.org">info@aimlds.org</a>. The product terms are in the <a href="TERMS.md">Terms</a>; what changed in each release is in the <a href="CHANGELOG.md">release log</a>.</p>
+
+    <footer><p>Sold by <strong>2351485 ALBERTA INC.</strong> (AIMLDS) &middot; Payments by Stripe &middot; <a href="pricing.html">Pricing</a> &middot; <a href="TERMS.md">Terms</a> &middot; <a href="privacy.html">Privacy</a> &middot; <a href="CHANGELOG.md">Releases</a> &middot; <a href="mailto:info@aimlds.org">Contact</a></p>
+    Owned by <a href="https://nrupalakolkar.com">Nrupal Akolkar</a> &middot; Built with <a href="https://muse.ai/join">Muse by Meta</a> &mdash; join Muse, then redeem code <strong>101EEK</strong> in Settings within 48 hours of joining and we both earn tokens.</footer>
+</main>
+</body>
+</html>
