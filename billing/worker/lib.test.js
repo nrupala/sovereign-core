@@ -281,6 +281,19 @@ test("worker: checkout.session.completed issues a licence; claim page shows the 
   assert.ok(html.includes(licence.token), "claim page shows the token");
   assert.ok(html.includes("Sovereign Core"), "claim page names the product");
   assert.ok(html.includes("Settings"), "claim page gives activation steps");
+  assert.ok(html.includes("Sold by <strong>2351485 ALBERTA INC.</strong> (AIMLDS)"), "claim page carries the seller strip");
+  assert.ok(html.includes("Payments by Stripe"), "seller strip names the payment processor");
+  assert.ok(html.includes("https://nrupala.github.io/sovereign-core/pricing.html"), "seller strip links the pricing page");
+});
+
+test("worker: every claim page variant carries the seller strip", async () => {
+  const { env } = fakeEnv();
+  const processing = await worker.fetch(new Request("https://billing.example/claim?session=cs_unknown"), env, {});
+  assert.equal(processing.status, 200);
+  assert.ok((await processing.text()).includes("Sold by <strong>2351485 ALBERTA INC.</strong> (AIMLDS)"), "processing page carries the seller strip");
+  const noSession = await worker.fetch(new Request("https://billing.example/claim"), env, {});
+  assert.equal(noSession.status, 200);
+  assert.ok((await noSession.text()).includes("Sold by <strong>2351485 ALBERTA INC.</strong> (AIMLDS)"), "no-session page carries the seller strip");
 });
 
 test("worker: completing the same session twice issues exactly one licence", async () => {

@@ -80,9 +80,13 @@ function page(title, bodyHtml) {
   pre { background: #161616; border: 1px solid #333; border-radius: 8px; padding: 1rem; white-space: pre-wrap; word-break: break-all; }
   button { background: #e8e8e8; color: #0a0a0a; border: 0; border-radius: 6px; padding: 0.5rem 1rem; cursor: pointer; }
   .muted { color: #9a9a9a; }
+  footer { margin-top: 2.5rem; border-top: 1px solid #333; padding-top: 1rem; font-size: 0.8rem; color: #9a9a9a; }
+  footer a { color: #e8e8e8; }
 </style>
 </head>
-<body><main>${bodyHtml}</main></body>
+<body><main>${bodyHtml}
+<footer><p>Sold by <strong>2351485 ALBERTA INC.</strong> (AIMLDS) &middot; Payments by Stripe &middot; <a href="https://nrupala.github.io/sovereign-core/pricing.html">Pricing</a> &middot; <a href="https://nrupala.github.io/sovereign-core/TERMS.md">Terms</a> &middot; <a href="https://nrupala.github.io/sovereign-core/privacy.html">Privacy</a> &middot; <a href="https://nrupala.github.io/sovereign-core/CHANGELOG.md">Releases</a> &middot; <a href="mailto:info@aimlds.org">Contact</a></p></footer>
+</main></body>
 </html>`;
 }
 
