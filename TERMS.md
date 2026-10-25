@@ -42,6 +42,14 @@ If you purchase a sovereign-core licence directly from the Company, you may requ
 
 When a refund is issued, the licence for that purchase ends and its licence key will be revoked. A refund does not delete or lock your existing vaults or data. If you purchased through a third-party store or reseller, that seller’s refund process applies. This guarantee is in addition to any rights that cannot be excluded under applicable law.
 
-## 10. Contact
+## 10. Best efforts; errors and corrections
+
+The Company has made every reasonable effort to make the product useful and true to its stated intent. A released product is not a guarantee of perfection: gaps, lapses, and errors may exist in the product and may surface as the product is used and as the platforms it runs on change. The Company will, on an ongoing basis and to the extent reasonably within its control, work to identify errors in the product and to correct them through updates as they come to light. This section does not add to, or limit, the warranty disclaimer in section 4.
+
+## 11. Intended use
+
+The product is licensed for use as described in its documentation and user guide. To the maximum extent permitted by applicable law, a claim is not admissible to the extent it arises from use of the product contrary to its intended use or its documentation, including use directed, configured, or decided by a third party. A decision by you, or by any third party, to use the product outside its intended use does not transfer responsibility for that use, or for its consequences, to the Company.
+
+## 12. Contact
 
 Questions about these Product Terms may be sent to info@aimlds.org.
