@@ -31,6 +31,8 @@ Sovereign Core is sold as a one-time US$49.99 licence. There is no subscription 
 
 **Refunds.** Direct purchases carry a 30-day money-back guarantee: contact info@aimlds.org within 30 calendar days after purchase to request a full refund. If a purchase is refunded, its licence key is revoked and will no longer activate. Your existing vaults and data are not affected. If you bought through a third-party store, use that store’s refund process.
 
+**Terms in brief.** The product terms (`TERMS.md`) cap the Company's total liability at the amount you paid, exclude claims arising from use contrary to the product's intended use, and record the Company's commitment to identify and correct errors through updates as they come to light.
+
 **Terms and support.** The terms that govern the product are in `TERMS.md`; the code licensing map is in `LICENSING.md`. For licence help, contact info@aimlds.org.
 
 ## Home / Today
