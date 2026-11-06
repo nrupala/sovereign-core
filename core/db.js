@@ -1,4 +1,4 @@
-// Copyright (c) 2026 Nrupal Akolkar. SPDX-License-Identifier: MIT
+// Copyright (c) 2026 2351485 ALBERTA INC. SPDX-License-Identifier: MIT
 /**
  * Sovereign Core v2.0 - Fort Knox Storage Engine
  * 
@@ -295,7 +295,7 @@ export async function setSetting(key, value) {
 }
 
 /* ── Vaults ── */
-export async function saveVault(id, name, salt, verifier = null) {
+export async function saveVault(id, name, salt, verifier = null, extra = null) {
     await initSovereignDB();
     try {
         const saltArr = salt instanceof Uint8Array ? Array.from(salt) : salt;
@@ -306,7 +306,12 @@ export async function saveVault(id, name, salt, verifier = null) {
             ciphertext: Array.from(new Uint8Array(verifier.ciphertext)),
             iv: Array.from(verifier.iv)
         } : null;
-        const vaultData = { id, name, salt: saltArr, verifier: verifierArr, createdAt: Date.now() };
+        // Phase 1 (core/store.js): `extra` carries the v2 envelope fields
+        // (formatVersion, kdf, passwordWrap, recoveryWrap) so the vault record
+        // of spec §5 persists through this same path. Existing callers pass
+        // no extra and get the exact v1 record shape, unchanged.
+        const vaultData = { id, name, salt: saltArr, verifier: verifierArr, createdAt: Date.now(),
+            ...(extra && typeof extra === 'object' ? extra : {}) };
         if (useIDB()) {
             await idbPut('vaults', vaultData);
         } else {
