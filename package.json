@@ -14,10 +14,16 @@
     "docs:clean": "rm -rf docs-site",
     "relay:deploy": "wrangler deploy --config relay/cloudflare/wrangler.jsonc",
     "relay:dev": "wrangler dev --config relay/cloudflare/wrangler.jsonc",
+    "stage:www": "node scripts/stage-www.mjs",
     "verify": "npm run lint && npm run test && npm run docs:build && npm run docs:verify"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.9.0",
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
     "@cloudflare/workers-types": "^5.20261006.1",
     "@eslint/js": "^9.9.0",
     "@playwright/test": "^1.47.0",
