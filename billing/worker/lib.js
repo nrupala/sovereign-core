@@ -248,6 +248,92 @@ export async function revokeBySession(store, sessionId) {
   return licence.kid;
 }
 
+/* ------------------------------------------------------------------ */
+/* Internal / operator pathway (Release-Readiness Standard §6).        */
+/*                                                                     */
+/* The operator mint issues a licence through THIS deployment's real   */
+/* pipeline — same signing key, same token contract, same blocklist —  */
+/* with no payment event. It exists so the production pipeline itself  */
+/* can be exercised end-to-end (mint → validate → revoke) without a    */
+/* purchase, and so the team can run the full product internally.      */
+/*                                                                     */
+/* Stamps and separation: the token payload carries kind:"internal",   */
+/* and the issuance record lives under internal:<kid> — never under    */
+/* session:/pi:, which are paid-issuance records. Internal issuance    */
+/* is therefore excluded from customer/revenue reads by construction:  */
+/* anything that counts paid licences reads session: records.          */
+/*                                                                     */
+/* The mint is gated by a dedicated OPERATOR credential. It is NOT a   */
+/* Stripe webhook secret and plays no part in webhook verification:    */
+/* the webhook path still trusts exactly one secret, its own (the      */
+/* F-SC-1 invariant is untouched). The mint accepts no Stripe input.   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Fail-closed operator credential check. An unconfigured expected
+ * secret authorizes NOTHING (returns false for every provided value,
+ * including an empty one); comparison is constant-time.
+ */
+export function verifyOperatorSecret(provided, expected) {
+  if (typeof expected !== "string" || expected.length === 0) return false;
+  if (typeof provided !== "string" || provided.length === 0) return false;
+  return timingSafeEqualStr(provided, expected);
+}
+
+/**
+ * Issue an internal licence. Signed with the deployment's production
+ * signing key, so the artefact validates in the shipped app under the
+ * production public key — that is the point of the pathway.
+ *
+ * Store records written:
+ *   internal:<kid>  -> {kid, token, kind:'internal', status:'active',
+ *                       note, createdAt}
+ *   kid:<kid>       -> {internal: true, status:'active'}
+ * No session:/pi: records are written — internal issuance never enters
+ * the paid-issuance namespace.
+ *
+ * @returns {Promise<{licence: object, created: boolean}>}
+ */
+export async function issueInternalLicence(store, { note } = {}, privateJwk) {
+  const kid = generateKid();
+  const iat = Math.floor(Date.now() / 1000);
+  const token = await signToken({ v: 1, product: PRODUCT, kid, iat, kind: "internal" }, privateJwk);
+  const licence = {
+    kid,
+    token,
+    kind: "internal",
+    status: "active",
+    note: typeof note === "string" && note ? note.slice(0, 200) : null,
+    createdAt: new Date().toISOString(),
+  };
+  await store.put(`internal:${kid}`, JSON.stringify(licence));
+  await store.put(`kid:${kid}`, JSON.stringify({ internal: true, status: "active" }));
+  return { licence, created: true };
+}
+
+/**
+ * Revoke an internal licence through the shared revocation mechanics:
+ * the internal record and the kid record flip to 'revoked' and the kid
+ * joins the same blocklist the app polls — one revocation surface for
+ * paid and internal licences alike. Idempotent. A kid with no internal
+ * record is not revocable through this path (paid revocation stays
+ * with the refund/async-failure paths).
+ *
+ * @returns {Promise<{revoked: boolean, kid?: string, reason?: string}>}
+ */
+export async function revokeInternalLicence(store, kid) {
+  if (!kid) return { revoked: false, reason: "no kid" };
+  const raw = await store.get(`internal:${kid}`);
+  if (!raw) return { revoked: false, reason: "no internal licence for kid" };
+  const licence = JSON.parse(raw);
+  if (licence.status !== "revoked") {
+    licence.status = "revoked";
+    await store.put(`internal:${kid}`, JSON.stringify(licence));
+  }
+  await revokeKid(store, kid, null);
+  return { revoked: true, kid };
+}
+
 /** Read the blocklist array record (empty array when unset/corrupt). */
 export async function getBlocklist(store) {
   const raw = await store.get("blocklist");

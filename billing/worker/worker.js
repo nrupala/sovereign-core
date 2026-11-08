@@ -11,12 +11,19 @@
  *   GET  /claim?session=<id>  buyer-facing licence claim page
  *   GET  /billing/blocklist   JSON {"revoked":[kid,...]} for the app
  *   GET  /health              "ok"
+ *   POST /internal/mint       operator mint (Bearer OPERATOR_MINT_SECRET)
+ *   POST /internal/revoke     operator revoke (Bearer OPERATOR_MINT_SECRET)
  *
  * Secrets (set at deploy via `wrangler secret put`, never committed):
  *   STRIPE_WEBHOOK_SECRET      this deployment's Stripe webhook endpoint
  *                              signing secret — the ONLY secret webhook
  *                              verification ever trusts here
  *   LICENSE_SIGNING_KEY_JWK    licence signing private key (JWK JSON)
+ *   OPERATOR_MINT_SECRET       operator credential for the internal
+ *                              pathway (/internal/*). It is NOT a webhook
+ *                              secret: webhook verification never consults
+ *                              it, and the mint accepts no Stripe input.
+ *                              Unset = the pathway mints nothing.
  *   RESEND_API_KEY             optional; enables the licence email leg
  *   MAIL_FROM                  optional; defaults to the AIMLDS address
  *
@@ -46,6 +53,9 @@ import {
   sessionMatchesBinding,
   sessionQualifiesForIssuance,
   getBlocklist,
+  verifyOperatorSecret,
+  issueInternalLicence,
+  revokeInternalLicence,
 } from "./lib.js";
 
 const NO_STORE = { "Cache-Control": "no-store", "X-Robots-Tag": "noindex" };
@@ -292,6 +302,57 @@ async function handleClaim(url, env) {
   return new Response(claimTokenPage(licence, Boolean(env.RESEND_API_KEY)), { headers: HTML_HEADERS });
 }
 
+/**
+ * Internal / operator pathway (Release-Readiness Standard §6): mint and
+ * revoke internal licences on THIS deployment — the production pipeline
+ * itself, not a test deployment. Fail-closed throughout: no configured
+ * operator secret, no minting; a wrong credential, no minting.
+ */
+function operatorGate(request, env) {
+  if (!env.OPERATOR_MINT_SECRET) {
+    console.error("internal pathway: OPERATOR_MINT_SECRET is not configured");
+    return new Response("operator mint not configured", { status: 500 });
+  }
+  const auth = request.headers.get("authorization") || "";
+  const provided = auth.startsWith("Bearer ") ? auth.slice("Bearer ".length) : null;
+  if (!verifyOperatorSecret(provided, env.OPERATOR_MINT_SECRET)) {
+    return new Response("unauthorized", { status: 401 });
+  }
+  return null; // authorized
+}
+
+async function handleInternalMint(request, env) {
+  const gate = operatorGate(request, env);
+  if (gate) return gate;
+  let note = null;
+  try {
+    const body = await request.json();
+    if (body && typeof body.note === "string") note = body.note;
+  } catch {
+    // A body is optional; an unparseable one simply carries no note.
+  }
+  const signingKey = JSON.parse(env.LICENSE_SIGNING_KEY_JWK);
+  const { licence } = await issueInternalLicence(kvStore(env), { note }, signingKey);
+  return Response.json(
+    { kid: licence.kid, token: licence.token, kind: "internal" },
+    { headers: NO_STORE }
+  );
+}
+
+async function handleInternalRevoke(request, env) {
+  const gate = operatorGate(request, env);
+  if (gate) return gate;
+  let kid = null;
+  try {
+    const body = await request.json();
+    if (body && typeof body.kid === "string") kid = body.kid;
+  } catch {
+    // Falls through to the no-kid result below.
+  }
+  const result = await revokeInternalLicence(kvStore(env), kid);
+  return Response.json(result, { headers: NO_STORE, status: result.revoked ? 200 : 404 });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
@@ -301,6 +362,12 @@ export default {
       }
       if (request.method === "POST" && url.pathname === "/billing/webhook") {
         return await handleWebhook(request, env, ctx);
+      }
+      if (request.method === "POST" && url.pathname === "/internal/mint") {
+        return await handleInternalMint(request, env);
+      }
+      if (request.method === "POST" && url.pathname === "/internal/revoke") {
+        return await handleInternalRevoke(request, env);
       }
       if (request.method === "GET" && url.pathname === "/claim") {
         return await handleClaim(url, env);
