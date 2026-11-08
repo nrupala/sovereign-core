@@ -26,6 +26,9 @@ import {
   sessionMatchesBinding,
   sessionQualifiesForIssuance,
   getBlocklist,
+  verifyOperatorSecret,
+  issueInternalLicence,
+  revokeInternalLicence,
 } from "./lib.js";
 import worker from "./worker.js";
 
@@ -496,4 +499,141 @@ test("worker: a partial refund does NOT revoke the licence", async () => {
   assert.equal(res.status, 200);
   assert.equal(JSON.parse(await store.get("session:cs_test_123")).status, "active");
   assert.deepEqual(await getBlocklist(store), []);
+});
+
+/* ---------------- Internal / operator pathway (RRS §6) ---------------- */
+
+const OPERATOR_SECRET = "operator_test_only_not_a_real_secret";
+
+function fakeEnvWithOperator() {
+  const { env, store } = fakeEnv();
+  env.OPERATOR_MINT_SECRET = OPERATOR_SECRET;
+  return { env, store };
+}
+
+function internalRequest(path, { secret, body } = {}) {
+  const headers = { "content-type": "application/json" };
+  if (secret !== undefined) headers.authorization = `Bearer ${secret}`;
+  return new Request(`https://billing.example${path}`, {
+    method: "POST",
+    headers,
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+test("verifyOperatorSecret fails closed: unconfigured expected authorizes nothing", () => {
+  assert.equal(verifyOperatorSecret("anything", undefined), false);
+  assert.equal(verifyOperatorSecret("anything", ""), false);
+  assert.equal(verifyOperatorSecret("", ""), false);
+  assert.equal(verifyOperatorSecret(undefined, OPERATOR_SECRET), false);
+  assert.equal(verifyOperatorSecret("wrong", OPERATOR_SECRET), false);
+  assert.equal(verifyOperatorSecret(OPERATOR_SECRET, OPERATOR_SECRET), true);
+});
+
+test("issueInternalLicence stamps kind=internal, signs verifiably, writes no paid records", async () => {
+  const store = memStore();
+  const { licence } = await issueInternalLicence(store, { note: "gate proof" }, TEST_PRIVATE_JWK);
+
+  const [payloadSeg, sigSeg] = licence.token.split(".");
+  const payload = JSON.parse(Buffer.from(payloadSeg, "base64url").toString("utf8"));
+  assert.equal(payload.v, 1);
+  assert.equal(payload.product, "sovereign-core");
+  assert.equal(payload.kid, licence.kid);
+  assert.equal(payload.kind, "internal", "the artefact itself carries the internal stamp");
+
+  const pub = await crypto.subtle.importKey(
+    "jwk", TEST_PUBLIC_JWK, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]
+  );
+  const ok = await crypto.subtle.verify(
+    { name: "ECDSA", hash: "SHA-256" }, pub,
+    Buffer.from(sigSeg, "base64url"), new TextEncoder().encode(payloadSeg)
+  );
+  assert.equal(ok, true, "internal token verifies under the deployment key");
+
+  // Records live ONLY in the internal namespace (+ the shared kid index):
+  // no session:/pi: records, so paid-issuance reads never count it.
+  assert.deepEqual(
+    [...store.map.keys()].sort(),
+    [`internal:${licence.kid}`, `kid:${licence.kid}`]
+  );
+  const rec = JSON.parse(await store.get(`internal:${licence.kid}`));
+  assert.equal(rec.kind, "internal");
+  assert.equal(rec.status, "active");
+  assert.equal(rec.note, "gate proof");
+  assert.deepEqual(JSON.parse(await store.get(`kid:${licence.kid}`)), { internal: true, status: "active" });
+});
+
+test("revokeInternalLicence blocklists the kid and is idempotent; unknown kid revokes nothing", async () => {
+  const store = memStore();
+  const { licence } = await issueInternalLicence(store, {}, TEST_PRIVATE_JWK);
+
+  const first = await revokeInternalLicence(store, licence.kid);
+  assert.deepEqual(first, { revoked: true, kid: licence.kid });
+  assert.deepEqual(await getBlocklist(store), [licence.kid]);
+  assert.equal(JSON.parse(await store.get(`internal:${licence.kid}`)).status, "revoked");
+  assert.equal(JSON.parse(await store.get(`kid:${licence.kid}`)).status, "revoked");
+
+  const second = await revokeInternalLicence(store, licence.kid);
+  assert.deepEqual(second, { revoked: true, kid: licence.kid });
+  assert.deepEqual(await getBlocklist(store), [licence.kid], "no duplicate blocklist entry");
+
+  const unknown = await revokeInternalLicence(store, "f".repeat(32));
+  assert.equal(unknown.revoked, false);
+  assert.deepEqual(await getBlocklist(store), [licence.kid], "unknown kid changed nothing");
+});
+
+test("worker: /internal/mint with no operator secret configured fails closed and mints nothing", async () => {
+  const { env, store } = fakeEnv(); // no OPERATOR_MINT_SECRET in env
+  const res = await worker.fetch(internalRequest("/internal/mint", { secret: "anything", body: {} }), env, {});
+  assert.equal(res.status, 500);
+  assert.equal(store.map.size, 0, "nothing was written");
+});
+
+test("worker: /internal/mint with a wrong or missing credential is 401 and mints nothing", async () => {
+  const { env, store } = fakeEnvWithOperator();
+  const wrong = await worker.fetch(internalRequest("/internal/mint", { secret: "nope", body: {} }), env, {});
+  assert.equal(wrong.status, 401);
+  const missing = await worker.fetch(internalRequest("/internal/mint", { body: {} }), env, {});
+  assert.equal(missing.status, 401);
+  assert.equal(store.map.size, 0, "nothing was written");
+});
+
+test("worker: operator mint -> token verifies -> revoke -> blocklist lists the kid", async () => {
+  const { env, store } = fakeEnvWithOperator();
+
+  const mint = await worker.fetch(
+    internalRequest("/internal/mint", { secret: OPERATOR_SECRET, body: { note: "pathway proof" } }), env, {}
+  );
+  assert.equal(mint.status, 200);
+  const { kid, token, kind } = await mint.json();
+  assert.equal(kind, "internal");
+  assert.match(kid, /^[0-9a-f]{32}$/);
+
+  const [payloadSeg, sigSeg] = token.split(".");
+  const payload = JSON.parse(Buffer.from(payloadSeg, "base64url").toString("utf8"));
+  assert.equal(payload.kind, "internal");
+  assert.equal(payload.kid, kid);
+  const pub = await crypto.subtle.importKey(
+    "jwk", TEST_PUBLIC_JWK, { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]
+  );
+  assert.equal(await crypto.subtle.verify(
+    { name: "ECDSA", hash: "SHA-256" }, pub,
+    Buffer.from(sigSeg, "base64url"), new TextEncoder().encode(payloadSeg)
+  ), true);
+
+  // No paid-issuance records were created by the mint.
+  assert.ok(![...store.map.keys()].some((k) => k.startsWith("session:") || k.startsWith("pi:")));
+
+  const revoke = await worker.fetch(
+    internalRequest("/internal/revoke", { secret: OPERATOR_SECRET, body: { kid } }), env, {}
+  );
+  assert.equal(revoke.status, 200);
+  assert.deepEqual(await (await worker.fetch(
+    new Request("https://billing.example/billing/blocklist"), env, {}
+  )).json(), { revoked: [kid] });
+
+  // The paid path is untouched by all of this.
+  const paid = await worker.fetch(webhookRequest(COMPLETED), env, {});
+  assert.equal(paid.status, 200);
+  assert.equal(JSON.parse(await store.get("session:cs_test_123")).status, "active");
 });

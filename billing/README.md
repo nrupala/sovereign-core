@@ -107,6 +107,30 @@ if its licence record still reads "active", and shows the
 payment-failed page instead of the processing page when there is no
 licence record at all.
 
+## Internal / operator pathway
+
+Per the fleet Release-Readiness Standard (§6), this deployment carries
+an operator pathway: `POST /internal/mint` and `POST /internal/revoke`,
+gated by the `OPERATOR_MINT_SECRET` credential (`Authorization: Bearer`).
+
+- The mint issues a licence through **this** deployment — the production
+  signing key, the production token contract, the production blocklist —
+  with no payment event, so the real pipeline can be exercised
+  end-to-end (mint → the artefact validates in the shipped app →
+  revoke) and the team can run the product internally.
+- Internal licences are **stamped**: the token payload carries
+  `kind: "internal"`, and the issuance record lives under
+  `internal:<kid>` — never under the `session:`/`pi:` records that paid
+  issuance uses — so internal issuance is excluded from
+  customer/revenue reads by construction.
+- Revocation goes through the same shared mechanics as the paid paths:
+  the kid joins the one `blocklist` record the app polls.
+- **Fail-closed:** if `OPERATOR_MINT_SECRET` is not configured, the
+  routes mint and revoke nothing. The credential is an operator
+  credential only — it is not a Stripe webhook secret, webhook
+  verification never consults it, and the mint accepts no Stripe input.
+  The one-deployment-one-webhook-secret invariant above is untouched.
+
 ## Live Stripe objects
 
 | Object       | Value |
@@ -135,6 +159,7 @@ Set at deploy with `wrangler secret put <NAME>` — **never committed**:
 | ------ | -------- | ------- |
 | `STRIPE_WEBHOOK_SECRET` | yes | Verifies Stripe webhook signatures (`whsec_...`). Issued when the live webhook endpoint is created in Stripe. |
 | `LICENSE_SIGNING_KEY_JWK` | yes | Licence signing private key, as a JWK JSON string. Generated at deploy (see below). |
+| `OPERATOR_MINT_SECRET` | no | Operator credential for the internal pathway (`/internal/mint`, `/internal/revoke`). Without it those routes fail closed. Not a webhook secret. |
 | `RESEND_API_KEY` | no | Enables the licence-key email leg. Without it, buyers get their key from the claim page only. |
 | `MAIL_FROM` | no | Sender for the licence email. Defaults to `Sovereign Core <info@aimlds.org>`. |
 
